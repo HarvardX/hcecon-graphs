@@ -1,0 +1,18 @@
+/* CSS file for Health Care Economics grapher */
+
+.y-values {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+.y-values input {
+  width: 5em;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+.controls #x-value-slider {
+  width: 100%;
+  margin-top: 20px;
+}
