@@ -1,33 +1,62 @@
 <!DOCTYPE html>
 <html>
 
+<!------------ INSTRUCTIONS ------------------
+
+1. Put this code into the HTML box.
+1. Put the following files into the appropriate place in an Advanced HTML TE:
+    - chart.min.js
+    - chartjs-plugin-annotation.min.js
+    - main.js
+    - styles.css
+2. Update the id on the <canvas> element to be unique for each chart (e.g., "myChart1", "myChart2", etc.).
+3. Update the chart_config variable in the <script> so that it points to the same element.
+4. Put the settings you want into the config variable. There are no settings available other than those shown,
+   unless you want to modify the main.js file.
+
+------------- END INSTRUCTIONS -------------->
+
 <head>
   <title>Chart.js Example</title>
   <link rel="stylesheet" href="css/styles.css">
   <!-- Sources: -->
   <!-- https://www.chartjs.org/ -->
   <!-- https://www.chartjs.org/chartjs-plugin-annotation/latest/ -->
+  <script>
+    const chart_name = "myChart";
+    if (typeof chart_config === 'undefined') {
+      var chart_config = {}
+    }
+    chart_config[chart_name] = {
+      x_values: [0, 2, 4, 6, 8, 10],
+      x_label: "Quantity",
+      y_values: [25, 20, 15, 10, 5, 0],
+      y_label: "Price",
+      title: "Demand Curve",
+    }
+  </script>
 </head>
 
 <body>
   <main>
     <div style="max-width:700px;">
-      <canvas id="myChart"></canvas>
+      <canvas id="myChart" class="chart_canvas" aria-label="Demand curve chart"></canvas>
       <div class="y-values">
         <!-- Input for y values at x = 0, 2, 4, 6, 8, 10 -->
         <input type="number" id="y0" placeholder="0" value="0" aria-label="y value at x=0">
-        <input type="number" id="y2" placeholder="0" value="5" aria-label="y value at x=2">
-        <input type="number" id="y4" placeholder="0" value="10" aria-label="y value at x=4">
-        <input type="number" id="y6" placeholder="0" value="15" aria-label="y value at x=6">
-        <input type="number" id="y8" placeholder="0" value="20" aria-label="y value at x=8">
-        <input type="number" id="y10" placeholder="0" value="25" aria-label="y value at x=10">
+        <input type="number" id="y2" placeholder="0" value="0" aria-label="y value at x=2">
+        <input type="number" id="y4" placeholder="0" value="0" aria-label="y value at x=4">
+        <input type="number" id="y6" placeholder="0" value="0" aria-label="y value at x=6">
+        <input type="number" id="y8" placeholder="0" value="0" aria-label="y value at x=8">
+        <input type="number" id="y10" placeholder="0" value="0" aria-label="y value at x=10">
       </div>
       <div class="controls">
         <!-- Slider to get y value at specific x values from 0 to 10 -->
         <input id="x-value-slider" type="range" min="0" max="10" step="0.1">
         <br>
-        <span id="x-value-display">X Value: 0</span>
-        <span id="y-value-display">Y Value: 0</span>
+        <span id="x-value-display" aria-live="polite">X: 0</span>
+        <span id="y-value-display" aria-live="polite">Y: 0</span>
+        <span id="area-under-curve-display" aria-live="polite">Area Of Rectangle: 0</span>
       </div>
     </div>
 

@@ -1,51 +1,33 @@
 (() => {
-  const ctx = document.getElementById("myChart");
+  const ctx = document.getElementById(chart_name);
   const slider = document.getElementById("x-value-slider");
-  let value_inputs = document.querySelectorAll(".y-values input");
-  let initial_values = Array.from(value_inputs).map((input) => Number(input.value) || 0);
+  const xValueDisplay = document.getElementById("x-value-display");
+  const yValueDisplay = document.getElementById("y-value-display");
+  const areaUnderCurveDisplay = document.getElementById("area-under-curve-display");
 
-  // Chart at 80% viewport height
-  new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: [0, 2, 4, 6, 8, 10],
-      datasets: [
-        {
-          label: "y values",
-          data: initial_values,
-          borderWidth: 1,
-        },
-      ],
-    },
-    options: {
-      animations: false,
-      cubicInterpolationMode: "default",
-      aspectRatio: ctx.clientWidth / (0.2 * window.innerHeight),
-      responsive: true,
-      scales: {
-        y: {
-          beginAtZero: true,
-        },
-        x: {
-          beginAtZero: true,
-          min: 0,
-          max: 10,
-        },
-      },
-    },
+  let value_inputs = document.querySelectorAll(".y-values input");
+
+  //////////// Initial Setup ////////////
+
+  // Set initial values from the chart_config variable.
+  value_inputs.forEach((el, index) => {
+    el.value = chart_config[chart_name].y_values[index];
+    el.setAttribute("aria-label", `y value at x=${chart_config[chart_name].x_values[index]}`);
   });
 
-  // Add vertical line annotation at the slider's initial position
+  makeChart(ctx, chart_config[chart_name]);
+
   annotate_with_vertical(
     Chart.getChart(ctx),
     Number(slider.value),
     interpolateValues(Chart.getChart(ctx), Number(slider.value))
   );
 
-  // Update the chart when input values change
-  const inputs = ["y0", "y2", "y4", "y6", "y8", "y10"];
-  inputs.forEach((id, index) => {
-    document.getElementById(id).addEventListener("input", function () {
+  /////////////// Event Listeners ///////////////
+
+  // Update chart when y value inputs change
+  value_inputs.forEach((el, index) => {
+    el.addEventListener("input", function () {
       const chart = Chart.getChart(ctx);
       chart.data.datasets[0].data[index] = Number(this.value) || 0;
       chart.update();
@@ -58,8 +40,6 @@
   });
 
   // Update the displayed x and y values based on the slider position
-  const xValueDisplay = document.getElementById("x-value-display");
-  const yValueDisplay = document.getElementById("y-value-display");
   slider.addEventListener("input", function () {
     const xValue = Number(this.value);
 
@@ -69,8 +49,69 @@
 
     let yValue = interpolateValues(chart, xValue) || 0;
     annotate_with_vertical(chart, xValue, yValue);
-    updateDisplays(xValue, yValue);
   });
+
+  /////////////// Functions ///////////////
+
+  function makeChart(ctx, chart_config) {
+    console.log(chart_config);
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: chart_config.x_values,
+        datasets: [
+          {
+            label: chart_config.y_label,
+            data: chart_config.y_values,
+            borderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+          },
+        ],
+      },
+      options: {
+        animations: false,
+        cubicInterpolationMode: "default",
+        aspectRatio: ctx.clientWidth / (0.2 * window.innerHeight),
+        responsive: true,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          title: {
+            display: true,
+            text: chart_config.title,
+            font: {
+              size: 18,
+            },
+          },
+          annotation: {
+            annotations: {},
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: chart_config.y_label,
+              font: { size: 14, weight: "bold" },
+            },
+          },
+          x: {
+            beginAtZero: true,
+            min: 0,
+            max: 10,
+            title: {
+              display: true,
+              text: chart_config.x_label,
+              font: { size: 14, weight: "bold" },
+            },
+          },
+        },
+      },
+    });
+  }
 
   // Linear interpolation to find the corresponding y value
   function interpolateValues(chart, xValue) {
@@ -88,7 +129,6 @@
         break;
       }
     }
-
     return yValue;
   }
 
@@ -117,12 +157,18 @@
       },
     };
     chart.update();
+    updateDisplays(xValue, yValue);
   }
 
   // Update the displayed x and y values
   function updateDisplays(xValue, yValue) {
-    xValueDisplay.textContent = `X Value: ${xValue.toFixed(2)}`;
-    yValueDisplay.textContent = `Y Value: ${yValue.toFixed(2)}`;
-    console.log(`X Value: ${xValue.toFixed(2)}, Y Value: ${yValue.toFixed(2)}`);
+    let area_of_rectangle = xValue * yValue;
+    let precision = 1;
+    xValueDisplay.textContent = `X Value: ${xValue.toFixed(precision)}`;
+    yValueDisplay.textContent = `Y Value: ${yValue.toFixed(precision)}`;
+    areaUnderCurveDisplay.textContent = `Area Of Rectangle: ${area_of_rectangle.toFixed(
+      precision
+    )}`;
+    console.log(`X Value: ${xValue.toFixed(precision)}, Y Value: ${yValue.toFixed(precision)}`);
   }
 })();
