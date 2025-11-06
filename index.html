@@ -9,9 +9,11 @@
     - chartjs-plugin-annotation.min.js
     - main.js
     - styles.css
-2. Update the id on the <canvas> element to be unique for each chart (e.g., "myChart1", "myChart2", etc.).
+2. Update the id on the <canvas> element to be unique for each chart 
+   (e.g., "myChart1", "myChart2", etc.).
 3. Update the chart_config variable in the <script> so that it points to the same element.
-4. Put the settings you want into the config variable. There are no settings available other than those shown,
+4. Put the settings you want into the config variable. 
+   There are no settings available other than those shown,
    unless you want to modify the main.js file.
 
 ------------- END INSTRUCTIONS -------------->
@@ -23,7 +25,10 @@
   <!-- https://www.chartjs.org/ -->
   <!-- https://www.chartjs.org/chartjs-plugin-annotation/latest/ -->
   <script>
+    //////////// UPDATE THE CHART ID BELOW ////////////
     const chart_name = "myChart";
+    //////////// Make sure it matches the <canvas> element's id ////////////
+    // TODO: There's probably a better way to handle multiple charts on one page.
     if (typeof chart_config === 'undefined') {
       var chart_config = {}
     }
@@ -40,9 +45,11 @@
 <body>
   <main>
     <div style="max-width:700px;">
+      <!---------- Make sure the <canvas> id below matches the chart_name variable ----------->
       <canvas id="myChart" class="chart_canvas" aria-label="Demand curve chart"></canvas>
+      <!-- Inputs for keyboard users -->
+       <!-- TODO: possibly add drag functionality to the chart -->
       <div class="y-values">
-        <!-- Input for y values at x = 0, 2, 4, 6, 8, 10 -->
         <input type="number" id="y0" placeholder="0" value="0" aria-label="y value at x=0">
         <input type="number" id="y2" placeholder="0" value="0" aria-label="y value at x=2">
         <input type="number" id="y4" placeholder="0" value="0" aria-label="y value at x=4">
@@ -50,8 +57,8 @@
         <input type="number" id="y8" placeholder="0" value="0" aria-label="y value at x=8">
         <input type="number" id="y10" placeholder="0" value="0" aria-label="y value at x=10">
       </div>
+      <!-- Slider to inspect x/y values and total monetary value -->
       <div class="controls">
-        <!-- Slider to get y value at specific x values from 0 to 10 -->
         <input id="x-value-slider" type="range" min="0" max="10" step="0.1">
         <br>
         <span id="x-value-display" aria-live="polite">X: 0</span>
@@ -61,7 +68,6 @@
     </div>
 
     <script src="js/chart.min.js"></script>
-    <!-- Annotations plugin -->
     <script src="js/chartjs-plugin-annotation.min.js"></script>
     <script src="js/main.js"></script>
   </main>
