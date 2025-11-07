@@ -137,6 +137,7 @@
   }
 
   // Adds a vertical line to the plot at the specified xValue.
+  // TODO: switch this to a shaded box instead of lines.
   function annotate_with_vertical(chart, xValue, yValue) {
     chart.options.plugins.annotation = {
       annotations: {
