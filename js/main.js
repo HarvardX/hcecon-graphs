@@ -4,6 +4,7 @@
   const xValueDisplay = document.getElementById("x-value-display");
   const yValueDisplay = document.getElementById("y-value-display");
   const areaUnderCurveDisplay = document.getElementById("area-under-curve-display");
+  var activePoint = null;
 
   let value_inputs = document.querySelectorAll(".y-values input");
 
@@ -14,8 +15,11 @@
     el.value = chart_config[chart_name].y_values[index];
     el.setAttribute("aria-label", `y value at x=${chart_config[chart_name].x_values[index]}`);
   });
-
-  makeChart(ctx, chart_config[chart_name]);
+  const myChart = makeChart(ctx, chart_config[chart_name]);
+  // set pointer event handlers for canvas element
+  ctx.onpointerdown = down_handler;
+  ctx.onpointerup = up_handler;
+  ctx.onpointermove = null;
 
   annotate_with_vertical(
     Chart.getChart(ctx),
@@ -55,7 +59,7 @@
 
   function makeChart(ctx, chart_config) {
     console.log(chart_config);
-    new Chart(ctx, {
+    return new Chart(ctx, {
       type: "line",
       data: {
         labels: chart_config.x_values,
@@ -169,6 +173,63 @@
     areaUnderCurveDisplay.textContent = `Area Of Rectangle: ${area_of_rectangle.toFixed(
       precision
     )}`;
-    console.log(`X Value: ${xValue.toFixed(precision)}, Y Value: ${yValue.toFixed(precision)}`);
+    // console.log(`X Value: ${xValue.toFixed(precision)}, Y Value: ${yValue.toFixed(precision)}`);
+  }
+
+  // Handlers taken from https://stackoverflow.com/a/59110888/1330737
+  // Thanks to user MartinCR https://stackoverflow.com/users/5058026/martin-cr
+
+  function down_handler(event) {
+    document.getElementById(chart_name).getContext("2d");
+    const canvas = document.getElementById(chart_name);
+    // check for data point near event location
+    const points = myChart.getElementsAtEventForMode(event, "nearest", { intersect: true }, false);
+    if (points.length > 0) {
+      // grab nearest point, start dragging
+      activePoint = points[0];
+      canvas.onpointermove = move_handler;
+    }
+  }
+
+  function up_handler(event) {
+    const canvas = document.getElementById(chart_name);
+    // release grabbed point, stop dragging
+    activePoint = null;
+    canvas.onpointermove = null;
+  }
+
+  function move_handler(event) {
+    const canvas = document.getElementById(chart_name);
+    // locate grabbed point in chart data
+    if (activePoint != null) {
+      let data = myChart.data;
+      let datasetIndex = activePoint.datasetIndex;
+
+      // read mouse position
+      const helpers = Chart.helpers;
+      let position = helpers.getRelativePosition(event, myChart);
+
+      // convert mouse position to chart y axis value
+      let chartArea = myChart.chartArea;
+      let yAxis = myChart.scales["y"];
+      let yValue = map(position.y, chartArea.bottom, chartArea.top, yAxis.min, yAxis.max);
+
+      // update y value of active data point
+      data.datasets[datasetIndex].data[activePoint.index] = yValue;
+      myChart.update();
+      // Update the annotation
+      annotate_with_vertical(
+        myChart,
+        Number(slider.value),
+        interpolateValues(myChart, Number(slider.value))
+      );
+      // Update the corresponding input field
+      value_inputs[activePoint.index].value = yValue.toFixed(2);
+    }
+  }
+
+  // map value to other coordinate system
+  function map(value, start1, stop1, start2, stop2) {
+    return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
   }
 })();
