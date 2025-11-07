@@ -213,6 +213,9 @@
       let chartArea = myChart.chartArea;
       let yAxis = myChart.scales["y"];
       let yValue = map(position.y, chartArea.bottom, chartArea.top, yAxis.min, yAxis.max);
+      if (yValue < 0) {
+        yValue = 0;
+      }
 
       // update y value of active data point
       data.datasets[datasetIndex].data[activePoint.index] = yValue;
