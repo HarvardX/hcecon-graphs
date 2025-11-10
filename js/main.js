@@ -206,42 +206,7 @@
       let chartArea = myChart.chartArea;
       let yAxis = myChart.scales["y"];
       let yValue = map(position.y, chartArea.bottom, chartArea.top, yAxis.min, yAxis.max);
-      // Don't drag below 0
-      if (yValue < 0) {
-        yValue = 0;
-      }
-      if (chart_config[chart_name].monotonic_decreasing) {
-        // Don't drag above previous point
-        if (activePoint.index > 0) {
-          let previousYValue = data.datasets[datasetIndex].data[activePoint.index - 1];
-          if (yValue > previousYValue) {
-            yValue = previousYValue;
-          }
-        }
-        //Don't drag below next point
-        if (activePoint.index < data.datasets[datasetIndex].data.length - 1) {
-          let nextYValue = data.datasets[datasetIndex].data[activePoint.index + 1];
-          if (yValue < nextYValue) {
-            yValue = nextYValue;
-          }
-        }
-      }
-      else if (chart_config[chart_name].monotonic_increasing) {
-        // Don't drag below previous point
-        if (activePoint.index > 0) {
-          let previousYValue = data.datasets[datasetIndex].data[activePoint.index - 1];
-          if (yValue < previousYValue) {
-            yValue = previousYValue;
-          }
-        }
-        //Don't drag above next point
-        if (activePoint.index < data.datasets[datasetIndex].data.length - 1) {
-          let nextYValue = data.datasets[datasetIndex].data[activePoint.index + 1];
-          if (yValue > nextYValue) {
-            yValue = nextYValue;
-          }
-        }
-      }
+      yValue = enforceRestrictions(yValue, data.datasets[datasetIndex].data, chart_config[chart_name].restrictions);
 
       // update y value of active data point
       data.datasets[datasetIndex].data[activePoint.index] = yValue;
@@ -255,6 +220,47 @@
       // Update the corresponding input field
       value_inputs[activePoint.index].value = yValue.toFixed(2);
     }
+  }
+
+  function enforceRestrictions(value, data, restrictions) {
+    // Don't drag below 0
+    if (restrictions.no_negative_values) {
+      if (value < 0) {
+        value = 0;
+      }
+    }
+    if (restrictions.monotonic_decreasing) {
+      // Don't drag above previous point
+      if (activePoint.index > 0) {
+        let previousYValue = data[activePoint.index - 1];
+        if (value > previousYValue) {
+          value = previousYValue;
+        }
+      }
+      //Don't drag below next point
+      if (activePoint.index < data.length - 1) {
+        let nextYValue = data[activePoint.index + 1];
+        if (value < nextYValue) {
+          value = nextYValue;
+        }
+      }
+    } else if (restrictions.monotonic_increasing) {
+      // Don't drag below previous point
+      if (activePoint.index > 0) {
+        let previousYValue = data[activePoint.index - 1];
+        if (value < previousYValue) {
+          value = previousYValue;
+        }
+      }
+      //Don't drag above next point
+      if (activePoint.index < data.length - 1) {
+        let nextYValue = data[activePoint.index + 1];
+        if (value > nextYValue) {
+          value = nextYValue;
+        }
+      }
+    }
+    return value;
   }
 
   // map value to other coordinate system
