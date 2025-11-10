@@ -141,22 +141,14 @@
   function annotate_with_vertical(chart, xValue, yValue) {
     chart.options.plugins.annotation = {
       annotations: {
-        line1: {
-          type: "line",
-          xMin: xValue / 2, // I have no idea why we need this.
+        box1: {
+          type: "box",
+          xMin: 0,
           xMax: xValue / 2,
           yMin: 0,
           yMax: yValue,
-          borderColor: "red",
-          borderWidth: 2,
-        },
-        line2: {
-          type: "line",
-          xMin: 0,
-          xMax: xValue / 2,
-          yMin: yValue,
-          yMax: yValue,
-          borderColor: "red",
+          backgroundColor: "rgba(255, 0, 0, 0.3)",
+          borderColor: "rgba(255, 0, 0, 0.7)",
           borderWidth: 2,
         },
       },
@@ -214,8 +206,41 @@
       let chartArea = myChart.chartArea;
       let yAxis = myChart.scales["y"];
       let yValue = map(position.y, chartArea.bottom, chartArea.top, yAxis.min, yAxis.max);
+      // Don't drag below 0
       if (yValue < 0) {
         yValue = 0;
+      }
+      if (chart_config[chart_name].monotonic_decreasing) {
+        // Don't drag above previous point
+        if (activePoint.index > 0) {
+          let previousYValue = data.datasets[datasetIndex].data[activePoint.index - 1];
+          if (yValue > previousYValue) {
+            yValue = previousYValue;
+          }
+        }
+        //Don't drag below next point
+        if (activePoint.index < data.datasets[datasetIndex].data.length - 1) {
+          let nextYValue = data.datasets[datasetIndex].data[activePoint.index + 1];
+          if (yValue < nextYValue) {
+            yValue = nextYValue;
+          }
+        }
+      }
+      else if (chart_config[chart_name].monotonic_increasing) {
+        // Don't drag below previous point
+        if (activePoint.index > 0) {
+          let previousYValue = data.datasets[datasetIndex].data[activePoint.index - 1];
+          if (yValue < previousYValue) {
+            yValue = previousYValue;
+          }
+        }
+        //Don't drag above next point
+        if (activePoint.index < data.datasets[datasetIndex].data.length - 1) {
+          let nextYValue = data.datasets[datasetIndex].data[activePoint.index + 1];
+          if (yValue > nextYValue) {
+            yValue = nextYValue;
+          }
+        }
       }
 
       // update y value of active data point

@@ -35,9 +35,29 @@
     chart_config[chart_name] = {
       x_values: [0, 2, 4, 6, 8, 10],
       x_label: "Quantity",
-      y_values: [25, 20, 15, 10, 5, 0],
+      y_values: [25, 20, 15, 10, 5, 100],
       y_label: "Price",
       title: "Demand Curve",
+      restrictions: {
+        monotonic_increasing: false,
+        monotonic_decreasing: true // Can't set both true at once.
+      }
+    }
+    // Check to make sure the chart_config is set up correctly
+    temp = Array.from(chart_config[chart_name].y_values);
+    temp.sort(function (a, b) { return a - b });
+    if (
+      JSON.stringify(temp) !== JSON.stringify(chart_config[chart_name].y_values) &&
+      chart_config[chart_name].restrictions.monotonic_increasing
+    ) {
+      console.error("Error: y_values must be in increasing order if you want monotonic increasing.");
+    }
+    temp = Array.from(chart_config[chart_name].y_values);
+    temp.sort(function (a, b) { return b - a });
+    if (JSON.stringify(temp) !== JSON.stringify(chart_config[chart_name].y_values) &&
+      chart_config[chart_name].restrictions.monotonic_decreasing
+    ) {
+      console.error("Error: y_values must be in decreasing order if you want monotonic decreasing.");
     }
   </script>
 </head>
@@ -48,7 +68,7 @@
       <!---------- Make sure the <canvas> id below matches the chart_name variable ----------->
       <canvas id="myChart" class="chart_canvas" aria-label="Demand curve chart"></canvas>
       <!-- Inputs for keyboard users -->
-       <!-- TODO: possibly add drag functionality to the chart -->
+      <!-- TODO: possibly add drag functionality to the chart -->
       <div class="y-values">
         <input type="number" id="y0" placeholder="0" value="0" aria-label="y value at x=0">
         <input type="number" id="y2" placeholder="0" value="0" aria-label="y value at x=2">
