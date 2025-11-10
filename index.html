@@ -12,7 +12,7 @@
 2. Update the id on the <canvas> element to be unique for each chart 
    (e.g., "myChart1", "myChart2", etc.).
 3. Update the chart_config variable in the <script> so that it points to the same element.
-4. Put the settings you want into the config variable. 
+4. Put the settings you want into the chart_config variable. 
    There are no settings available other than those shown,
    unless you want to modify the main.js file.
 
@@ -32,33 +32,49 @@
     if (typeof chart_config === 'undefined') {
       var chart_config = {}
     }
+    /////////////// CHART CONFIGURATION ///////////////
     chart_config[chart_name] = {
-      x_values: [0, 2, 4, 6, 8, 10],
-      x_label: "Quantity",
-      y_values: [25, 20, 15, 10, 5, 0],
-      y_label: "Price",
       title: "Demand Curve",
+      x: {
+        values: [0, 2, 4, 6, 8, 10],
+        label: "Quantity",
+        units: "", // use "units", "count", "items", etc. to keep x units from showing up in area of rectangle
+        precision: 0.1,
+
+      },
+      y: {
+        values: [25, 20, 15, 10, 5, 0],
+        label: "Price",
+        units: " $", // Currency symbols will show before the number
+        precision: 0.01,
+      },
+      total: {
+        units: " $",
+        precision: 0.01
+      },
       restrictions: {
         monotonic_increasing: false,
         monotonic_decreasing: true, // Can't set both monotonics true at once.
         no_negative_values: true
       }
     }
+    ////////// END CHART CONFIGURATION //////////
+
     // Check to make sure the chart_config is set up correctly
-    temp = Array.from(chart_config[chart_name].y_values);
+    temp = Array.from(chart_config[chart_name].y.values);
     temp.sort(function (a, b) { return a - b });
     if (
-      JSON.stringify(temp) !== JSON.stringify(chart_config[chart_name].y_values) &&
+      JSON.stringify(temp) !== JSON.stringify(chart_config[chart_name].y.values) &&
       chart_config[chart_name].restrictions.monotonic_increasing
     ) {
-      console.error("Error: y_values must be in increasing order if you want monotonic increasing.");
+      console.error("Error: y.values must be in increasing order if you want monotonic increasing.");
     }
-    temp = Array.from(chart_config[chart_name].y_values);
+    temp = Array.from(chart_config[chart_name].y.values);
     temp.sort(function (a, b) { return b - a });
-    if (JSON.stringify(temp) !== JSON.stringify(chart_config[chart_name].y_values) &&
+    if (JSON.stringify(temp) !== JSON.stringify(chart_config[chart_name].y.values) &&
       chart_config[chart_name].restrictions.monotonic_decreasing
     ) {
-      console.error("Error: y_values must be in decreasing order if you want monotonic decreasing.");
+      console.error("Error: y.values must be in decreasing order if you want monotonic decreasing.");
     }
   </script>
 </head>
@@ -82,8 +98,8 @@
       <div class="controls">
         <input id="x-value-slider" type="range" min="0" max="10" step="0.1">
         <br>
-        <span id="x-value-display" aria-live="polite">X: 0</span>
-        <span id="y-value-display" aria-live="polite">Y: 0</span>
+        <span id="x-value-display" aria-live="polite">X Value: 0</span><br />
+        <span id="y-value-display" aria-live="polite">Y Value: 0</span><br />
         <span id="area-under-curve-display" aria-live="polite">Area Of Rectangle: 0</span>
       </div>
     </div>

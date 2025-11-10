@@ -4,6 +4,8 @@
   const xValueDisplay = document.getElementById("x-value-display");
   const yValueDisplay = document.getElementById("y-value-display");
   const areaUnderCurveDisplay = document.getElementById("area-under-curve-display");
+  const CURRENCY_SYMBOLS = ["$", "¢", "€", "£", "¥", "₹", "₩", "₽", "₺", "₪", "₫", "฿", "₴", "₦", "₱"];
+  const QUANTITY_WORDS = ["units", "items", "widgets", "things", "count"];
   var activePoint = null;
 
   let value_inputs = document.querySelectorAll(".y-values input");
@@ -12,8 +14,8 @@
 
   // Set initial values from the chart_config variable.
   value_inputs.forEach((el, index) => {
-    el.value = chart_config[chart_name].y_values[index];
-    el.setAttribute("aria-label", `y value at x=${chart_config[chart_name].x_values[index]}`);
+    el.value = chart_config[chart_name].y.values[index];
+    el.setAttribute("aria-label", `y value at x=${chart_config[chart_name].x.values[index]}`);
   });
   const myChart = makeChart(ctx, chart_config[chart_name]);
   // set pointer event handlers for canvas element
@@ -62,11 +64,11 @@
     return new Chart(ctx, {
       type: "line",
       data: {
-        labels: chart_config.x_values,
+        labels: chart_config.x.values,
         datasets: [
           {
-            label: chart_config.y_label,
-            data: chart_config.y_values,
+            label: chart_config.y.label,
+            data: chart_config.y.values,
             borderWidth: 2,
             pointRadius: 5,
             pointHoverRadius: 7,
@@ -98,7 +100,7 @@
             beginAtZero: true,
             title: {
               display: true,
-              text: chart_config.y_label,
+              text: chart_config.y.label,
               font: { size: 14, weight: "bold" },
             },
           },
@@ -108,7 +110,7 @@
             max: 10,
             title: {
               display: true,
-              text: chart_config.x_label,
+              text: chart_config.x.label,
               font: { size: 14, weight: "bold" },
             },
           },
@@ -159,13 +161,65 @@
 
   // Update the displayed x and y values
   function updateDisplays(xValue, yValue) {
-    let area_of_rectangle = xValue * yValue;
-    let precision = 1;
-    xValueDisplay.textContent = `X Value: ${xValue.toFixed(precision)}`;
-    yValueDisplay.textContent = `Y Value: ${yValue.toFixed(precision)}`;
-    areaUnderCurveDisplay.textContent = `Area Of Rectangle: ${area_of_rectangle.toFixed(
-      precision
-    )}`;
+    let x_precision = 2;
+    let y_precision = 2;
+    if (typeof chart_config[chart_name].x.precision === "number") {
+      x_precision = -Math.log10(chart_config[chart_name].x.precision);
+    }
+    if (typeof chart_config[chart_name].y.precision === "number") {
+      y_precision = -Math.log10(chart_config[chart_name].y.precision);
+    }
+    if (chart_config[chart_name].total.precision) {
+      total_precision = -Math.log10(chart_config[chart_name].total.precision);
+    } else {
+      total_precision = Math.max(x_precision, y_precision);
+    }
+    let area_of_rectangle = 
+      (Math.round(xValue * 10**x_precision) / 10**x_precision) * 
+      (Math.round(yValue * 10**y_precision) / 10**y_precision);
+
+    let x_text = `X Value: ${xValue.toFixed(x_precision)}`;
+    if (chart_config[chart_name].x.units) {
+      if (CURRENCY_SYMBOLS.includes(chart_config[chart_name].x.units.trim())) {
+        // Currency symbols go before the number.
+        x_text = `X Value: ${chart_config[chart_name].x.units}${xValue.toFixed(x_precision)}`;
+      } else {
+        x_text += ` ${chart_config[chart_name].x.units}`;
+      }
+      x_text = `Y Value: ${yValue.toFixed(y_precision)}`;
+    }
+    xValueDisplay.textContent = x_text;
+
+    let y_text = `Y Value: ${yValue.toFixed(y_precision)}`;
+    if (chart_config[chart_name].y.units) {
+      if (chart_config[chart_name].y.units) {
+        if (CURRENCY_SYMBOLS.includes(chart_config[chart_name].y.units.trim())) {
+          // Currency symbols go before the number.
+          y_text = `Y Value: ${chart_config[chart_name].y.units}${yValue.toFixed(y_precision)}`;
+        } else {
+          y_text += ` ${chart_config[chart_name].y.units}`;
+        }
+      }
+    }
+    yValueDisplay.textContent = y_text;
+
+    // Only show currency symbol if there are no x units.
+    if (chart_config[chart_name].y.units) {
+      if (
+        CURRENCY_SYMBOLS.includes(chart_config[chart_name].y.units.trim()) &&
+        (!chart_config[chart_name].x.units ||
+          QUANTITY_WORDS.includes(chart_config[chart_name].x.units.trim().toLowerCase()))
+      ) {
+        // Currency symbols go before the number.
+        areaUnderCurveDisplay.textContent = `Area Of Rectangle: ${
+          chart_config[chart_name].y.units
+        }${area_of_rectangle.toFixed(total_precision)}`;
+      } else {
+        areaUnderCurveDisplay.textContent = `Area Of Rectangle: ${area_of_rectangle.toFixed(
+          precision
+        )} ${chart_config[chart_name].y.units}`;
+      }
+    }
     // console.log(`X Value: ${xValue.toFixed(precision)}, Y Value: ${yValue.toFixed(precision)}`);
   }
 
@@ -206,7 +260,11 @@
       let chartArea = myChart.chartArea;
       let yAxis = myChart.scales["y"];
       let yValue = map(position.y, chartArea.bottom, chartArea.top, yAxis.min, yAxis.max);
-      yValue = enforceRestrictions(yValue, data.datasets[datasetIndex].data, chart_config[chart_name].restrictions);
+      yValue = enforceRestrictions(
+        yValue,
+        data.datasets[datasetIndex].data,
+        chart_config[chart_name].restrictions
+      );
 
       // update y value of active data point
       data.datasets[datasetIndex].data[activePoint.index] = yValue;
