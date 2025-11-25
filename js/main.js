@@ -3,59 +3,134 @@
   const slider = document.getElementById("x-value-slider");
   const xValueDisplay = document.getElementById("x-value-display");
   const yValueDisplay = document.getElementById("y-value-display");
-  const areaUnderCurveDisplay = document.getElementById("area-under-curve-display");
+  const areaUnderCurveDisplay = document.getElementById(
+    "area-under-curve-display"
+  );
+  // prettier-ignore
   const CURRENCY_SYMBOLS = ["$", "¢", "€", "£", "¥", "₹", "₩", "₽", "₺", "₪", "₫", "฿", "₴", "₦", "₱"];
+  // prettier-ignore
   const QUANTITY_WORDS = ["units", "items", "widgets", "things", "count"];
   var activePoint = null;
 
   let value_inputs = document.querySelectorAll(".y-values input");
+  let validated = validateInitialValues();
+  if (!validated) {
+    alert(
+      "Initial y values do not match your restrictions. See console for details."
+    );
+    return;
+  }
 
   //////////// Initial Setup ////////////
 
   // Set initial values from the chart_config variable.
   value_inputs.forEach((el, index) => {
     el.value = chart_config[chart_name].y.values[index];
-    el.setAttribute("aria-label", `y value at x=${chart_config[chart_name].x.values[index]}`);
+    el.setAttribute(
+      "aria-label",
+      `y value at x=${chart_config[chart_name].x.values[index]}`
+    );
   });
-  const myChart = makeChart(ctx, chart_config[chart_name]);
-  // set pointer event handlers for canvas element
-  ctx.onpointerdown = down_handler;
-  ctx.onpointerup = up_handler;
-  ctx.onpointermove = null;
 
-  annotate_with_vertical(
-    Chart.getChart(ctx),
-    Number(slider.value),
-    interpolateValues(Chart.getChart(ctx), Number(slider.value))
-  );
+  // Wait for the Chart.js and chart annotation libraries to load
+  let waiter = setInterval(function () {
+    if (typeof Chart !== "undefined") {
+      clearInterval(waiter);
+      let annotation_waiter = setInterval(function () {
+        try {
+          if (Chart.registry.plugins.items.annotation !== undefined) {
+            if (chart_name !== "undefined") {
+              if (typeof Chart !== "undefined") {
+                clearInterval(annotation_waiter);
+                initializeChart();
+              }
+            }
+          }
+        } catch (e) {
+          console.log("Waiting for Chart annotation plugin to load...");
+          return;
+        }
+      }, 100);
+    }
+  }, 100);
+
+  function initializeChart() {
+    const myChart = makeChart(ctx, chart_config[chart_name]);
+    // set pointer event handlers for canvas element
+    ctx.onpointerdown = down_handler;
+    ctx.onpointerup = up_handler;
+    ctx.onpointermove = null;
+
+    setEventListeners();
+
+    annotate_with_vertical(
+      Chart.getChart(ctx),
+      Number(slider.value),
+      interpolateValues(Chart.getChart(ctx), Number(slider.value))
+    );
+  }
+
+  ////////// Validate initial y values ////////
+  function validateInitialValues() {
+    temp = Array.from(chart_config[chart_name].y.values);
+    temp.sort(function (a, b) {
+      return a - b;
+    });
+    if (
+      JSON.stringify(temp) !==
+        JSON.stringify(chart_config[chart_name].y.values) &&
+      chart_config[chart_name].restrictions.monotonic_increasing
+    ) {
+      console.error(
+        "Error: y.values must be in increasing order if you want monotonic increasing."
+      );
+      return false;
+    }
+    temp = Array.from(chart_config[chart_name].y.values);
+    temp.sort(function (a, b) {
+      return b - a;
+    });
+    if (
+      JSON.stringify(temp) !==
+        JSON.stringify(chart_config[chart_name].y.values) &&
+      chart_config[chart_name].restrictions.monotonic_decreasing
+    ) {
+      console.error(
+        "Error: y.values must be in decreasing order if you want monotonic decreasing."
+      );
+      return false;
+    }
+    return true;
+  }
 
   /////////////// Event Listeners ///////////////
-
-  // Update chart when y value inputs change
-  value_inputs.forEach((el, index) => {
-    el.addEventListener("input", function () {
-      const chart = Chart.getChart(ctx);
-      chart.data.datasets[0].data[index] = Number(this.value) || 0;
-      chart.update();
-      annotate_with_vertical(
-        chart,
-        Number(slider.value),
-        interpolateValues(chart, Number(slider.value))
-      );
+  function setEventListeners() {
+    // Update chart when y value inputs change
+    value_inputs.forEach((el, index) => {
+      el.addEventListener("input", function () {
+        const chart = Chart.getChart(ctx);
+        chart.data.datasets[0].data[index] = Number(this.value) || 0;
+        chart.update();
+        annotate_with_vertical(
+          chart,
+          Number(slider.value),
+          interpolateValues(chart, Number(slider.value))
+        );
+      });
     });
-  });
 
-  // Update the displayed x and y values based on the slider position
-  slider.addEventListener("input", function () {
-    const xValue = Number(this.value);
+    // Update the displayed x and y values based on the slider position
+    slider.addEventListener("input", function () {
+      const xValue = Number(this.value);
 
-    const chart = Chart.getChart(ctx);
-    const dataset = chart.data.datasets[0].data;
-    const labels = chart.data.labels;
+      const chart = Chart.getChart(ctx);
+      const dataset = chart.data.datasets[0].data;
+      const labels = chart.data.labels;
 
-    let yValue = interpolateValues(chart, xValue) || 0;
-    annotate_with_vertical(chart, xValue, yValue);
-  });
+      let yValue = interpolateValues(chart, xValue) || 0;
+      annotate_with_vertical(chart, xValue, yValue);
+    });
+  }
 
   /////////////// Functions ///////////////
 
@@ -174,15 +249,17 @@
     } else {
       total_precision = Math.max(x_precision, y_precision);
     }
-    let area_of_rectangle = 
-      (Math.round(xValue * 10**x_precision) / 10**x_precision) * 
-      (Math.round(yValue * 10**y_precision) / 10**y_precision);
+    let area_of_rectangle =
+      (Math.round(xValue * 10 ** x_precision) / 10 ** x_precision) *
+      (Math.round(yValue * 10 ** y_precision) / 10 ** y_precision);
 
     let x_text = `X Value: ${xValue.toFixed(x_precision)}`;
     if (chart_config[chart_name].x.units) {
       if (CURRENCY_SYMBOLS.includes(chart_config[chart_name].x.units.trim())) {
         // Currency symbols go before the number.
-        x_text = `X Value: ${chart_config[chart_name].x.units}${xValue.toFixed(x_precision)}`;
+        x_text = `X Value: ${chart_config[chart_name].x.units}${xValue.toFixed(
+          x_precision
+        )}`;
       } else {
         x_text += ` ${chart_config[chart_name].x.units}`;
       }
@@ -193,9 +270,13 @@
     let y_text = `Y Value: ${yValue.toFixed(y_precision)}`;
     if (chart_config[chart_name].y.units) {
       if (chart_config[chart_name].y.units) {
-        if (CURRENCY_SYMBOLS.includes(chart_config[chart_name].y.units.trim())) {
+        if (
+          CURRENCY_SYMBOLS.includes(chart_config[chart_name].y.units.trim())
+        ) {
           // Currency symbols go before the number.
-          y_text = `Y Value: ${chart_config[chart_name].y.units}${yValue.toFixed(y_precision)}`;
+          y_text = `Y Value: ${
+            chart_config[chart_name].y.units
+          }${yValue.toFixed(y_precision)}`;
         } else {
           y_text += ` ${chart_config[chart_name].y.units}`;
         }
@@ -208,7 +289,9 @@
       if (
         CURRENCY_SYMBOLS.includes(chart_config[chart_name].y.units.trim()) &&
         (!chart_config[chart_name].x.units ||
-          QUANTITY_WORDS.includes(chart_config[chart_name].x.units.trim().toLowerCase()))
+          QUANTITY_WORDS.includes(
+            chart_config[chart_name].x.units.trim().toLowerCase()
+          ))
       ) {
         // Currency symbols go before the number.
         areaUnderCurveDisplay.textContent = `Area Of Rectangle: ${
@@ -230,7 +313,12 @@
     document.getElementById(chart_name).getContext("2d");
     const canvas = document.getElementById(chart_name);
     // check for data point near event location
-    const points = myChart.getElementsAtEventForMode(event, "nearest", { intersect: true }, false);
+    const points = myChart.getElementsAtEventForMode(
+      event,
+      "nearest",
+      { intersect: true },
+      false
+    );
     if (points.length > 0) {
       // grab nearest point, start dragging
       activePoint = points[0];
@@ -259,7 +347,13 @@
       // convert mouse position to chart y axis value
       let chartArea = myChart.chartArea;
       let yAxis = myChart.scales["y"];
-      let yValue = map(position.y, chartArea.bottom, chartArea.top, yAxis.min, yAxis.max);
+      let yValue = map(
+        position.y,
+        chartArea.bottom,
+        chartArea.top,
+        yAxis.min,
+        yAxis.max
+      );
       yValue = enforceRestrictions(
         yValue,
         data.datasets[datasetIndex].data,
