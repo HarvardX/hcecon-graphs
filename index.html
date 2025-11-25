@@ -59,23 +59,6 @@
       }
     }
     ////////// END CHART CONFIGURATION //////////
-
-    // Check to make sure the chart_config is set up correctly
-    temp = Array.from(chart_config[chart_name].y.values);
-    temp.sort(function (a, b) { return a - b });
-    if (
-      JSON.stringify(temp) !== JSON.stringify(chart_config[chart_name].y.values) &&
-      chart_config[chart_name].restrictions.monotonic_increasing
-    ) {
-      console.error("Error: y.values must be in increasing order if you want monotonic increasing.");
-    }
-    temp = Array.from(chart_config[chart_name].y.values);
-    temp.sort(function (a, b) { return b - a });
-    if (JSON.stringify(temp) !== JSON.stringify(chart_config[chart_name].y.values) &&
-      chart_config[chart_name].restrictions.monotonic_decreasing
-    ) {
-      console.error("Error: y.values must be in decreasing order if you want monotonic decreasing.");
-    }
   </script>
 </head>
 
