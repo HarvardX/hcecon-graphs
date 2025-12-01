@@ -10,6 +10,8 @@
   const CURRENCY_SYMBOLS = ["$", "¢", "€", "£", "¥", "₹", "₩", "₽", "₺", "₪", "₫", "฿", "₴", "₦", "₱"];
   // prettier-ignore
   const QUANTITY_WORDS = ["units", "items", "widgets", "things", "count"];
+  const TE_ID = document.currentScript.getAttribute('data-te-ids');
+
   var activePoint = null;
 
   let value_inputs = document.querySelectorAll(".y-values input");
@@ -20,6 +22,29 @@
     );
     return;
   }
+
+  ///////////////// Script Loading //////////////////
+  // Load the other scripts from the "media" section of all places,
+  // because then we can ensure they load in order.
+  ///////////////////////////////////////////////////
+  // COMMENT THIS OUT IF WORKING LOCALLY.
+  ///////////////////////////////////////////////////
+  let media_object = window.lxp.te[TE_ID].media;
+  let media_names = Object.keys(media_object);
+  let scripts = [];
+  media_names.forEach((name) => {
+    if (media_object[name].filename.includes(".js")) {
+      scripts.push(media_object[name].publicUrl);
+    }
+  });
+  scripts.forEach((script) => {
+    let scriptTag = document.createElement("script");
+    scriptTag.src = script;
+    // Make sure they load in order.
+    scriptTag.async = false;
+    document.head.appendChild(scriptTag);
+  });
+  ///////////////////////////////////////////////////
 
   //////////// Initial Setup ////////////
 
@@ -153,7 +178,7 @@
       options: {
         animations: false,
         cubicInterpolationMode: "default",
-        aspectRatio: ctx.clientWidth / (0.2 * window.innerHeight),
+        aspectRatio: ctx.clientWidth / (0.3 * window.innerHeight),
         responsive: true,
         plugins: {
           legend: {
