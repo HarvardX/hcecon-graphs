@@ -13,6 +13,7 @@
   const TE_ID = document.currentScript.getAttribute('data-te-ids');
 
   var activePoint = null;
+  var myChart; // Intentionally "global" within this code.
 
   let value_inputs = document.querySelectorAll(".y-values input");
   let validated = validateInitialValues();
@@ -80,7 +81,7 @@
   }, 100);
 
   function initializeChart() {
-    const myChart = makeChart(ctx, chart_config[chart_name]);
+    myChart = makeChart(ctx, chart_config[chart_name]);
     // set pointer event handlers for canvas element
     ctx.onpointerdown = down_handler;
     ctx.onpointerup = up_handler;
