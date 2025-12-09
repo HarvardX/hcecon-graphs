@@ -36,21 +36,21 @@
     chart_config[chart_name] = {
       title: "Demand Curve",
       x: {
-        values: [0, 2, 4, 6, 8, 10],
+        values: [0,25,50,75,100],
         label: "Quantity",
         units: "", // use "units", "count", "items", etc. to keep x units from showing up in area of rectangle
-        precision: 0.1,
+        precision: 1,
 
       },
       y: {
-        values: [25, 20, 15, 10, 5, 0],
+        values: [100, 75, 50, 25, 0],
         label: "Price",
         units: " $", // Currency symbols will show before the number
-        precision: 0.01,
+        precision: 1,
       },
       total: {
         units: " $",
-        precision: 0.01
+        precision: 0.1
       },
       restrictions: {
         monotonic_increasing: false,
@@ -75,11 +75,10 @@
         <input type="number" id="y4" placeholder="0" value="0" aria-label="y value at x=4">
         <input type="number" id="y6" placeholder="0" value="0" aria-label="y value at x=6">
         <input type="number" id="y8" placeholder="0" value="0" aria-label="y value at x=8">
-        <input type="number" id="y10" placeholder="0" value="0" aria-label="y value at x=10">
       </div>
       <!-- Slider to inspect x/y values and total monetary value -->
       <div class="controls">
-        <input id="x-value-slider" type="range" min="0" max="10" step="0.1">
+        <input id="x-value-slider" type="range" min="0" max="100" step="5">
         <br>
         <span id="x-value-display" aria-live="polite">X Value: 0</span><br />
         <span id="y-value-display" aria-live="polite">Y Value: 0</span><br />
