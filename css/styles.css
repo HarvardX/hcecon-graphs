@@ -1,9 +1,8 @@
 /* CSS file for Health Care Economics grapher */
 
 .y-values {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 10px;
+  display: flex;
+  justify-content: space-between;
 }
 
 .y-values input {
