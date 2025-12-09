@@ -99,7 +99,7 @@
 
     setEventListeners();
 
-    annotate_with_vertical(
+    annotateWithVertical(
       Chart.getChart(ctx),
       Number(slider.value),
       interpolateValues(Chart.getChart(ctx), Number(slider.value))
@@ -147,7 +147,7 @@
         const chart = Chart.getChart(ctx);
         chart.data.datasets[0].data[index] = Number(this.value) || 0;
         chart.update();
-        annotate_with_vertical(
+        annotateWithVertical(
           chart,
           Number(slider.value),
           interpolateValues(chart, Number(slider.value))
@@ -164,7 +164,7 @@
       const labels = chart.data.labels;
 
       let yValue = interpolateValues(chart, xValue) || 0;
-      annotate_with_vertical(chart, xValue, yValue);
+      annotateWithVertical(chart, xValue, yValue);
     });
   }
 
@@ -251,13 +251,13 @@
 
   // Adds a vertical line to the plot at the specified xValue.
   // TODO: switch this to a shaded box instead of lines.
-  function annotate_with_vertical(chart, xValue, yValue) {
+  function annotateWithVertical(chart, xValue, yValue) {
     chart.options.plugins.annotation = {
       annotations: {
         box1: {
           type: "box",
           xMin: 0,
-          xMax: xValue / 2,
+          xMax: xValue / 25,
           yMin: 0,
           yMax: yValue,
           backgroundColor: "rgba(255, 0, 0, 0.3)",
@@ -400,7 +400,7 @@
       data.datasets[datasetIndex].data[activePoint.index] = yValue;
       myChart.update();
       // Update the annotation
-      annotate_with_vertical(
+      annotateWithVertical(
         myChart,
         Number(slider.value),
         interpolateValues(myChart, Number(slider.value))
