@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <!------------ INSTRUCTIONS ------------------
 
 1. Put this code into the HTML box.
@@ -20,7 +19,7 @@
 
 <head>
   <title>Health Care Economics Interactive Demand Curve</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css" />
   <!-- Sources: -->
   <!-- https://www.chartjs.org/ -->
   <!-- https://www.chartjs.org/chartjs-plugin-annotation/latest/ -->
@@ -29,18 +28,17 @@
     const chart_name = "myChart";
     //////////// Make sure it matches the <canvas> element's id ////////////
     // TODO: There's probably a better way to handle multiple charts on one page.
-    if (typeof chart_config === 'undefined') {
-      var chart_config = {}
+    if (typeof chart_config === "undefined") {
+      var chart_config = {};
     }
     /////////////// CHART CONFIGURATION ///////////////
     chart_config[chart_name] = {
       title: "Demand Curve",
       x: {
-        values: [0,25,50,75,100],
+        values: [0,10,20,30,40],
         label: "Quantity",
         units: "", // use "units", "count", "items", etc. to keep x units from showing up in area of rectangle
         precision: 1,
-
       },
       y: {
         values: [100, 75, 50, 25, 0],
@@ -50,36 +48,36 @@
       },
       total: {
         units: " $",
-        precision: 0.1
+        precision: 0.1,
       },
       restrictions: {
         monotonic_increasing: false,
-        monotonic_decreasing: true, // Can't set both monotonics true at once.
-        no_negative_values: true
-      }
-    }
+        monotonic_decreasing: false, // Can't set both monotonics true at once.
+        no_negative_values: true,
+      },
+    };
     ////////// END CHART CONFIGURATION //////////
   </script>
 </head>
 
 <body>
   <main>
-    <div style="max-width:700px;">
+    <div style="max-width: 700px">
       <!---------- Make sure the <canvas> id below matches the chart_name variable ----------->
       <canvas id="myChart" class="chart_canvas" aria-label="Demand curve chart"></canvas>
       <!-- Inputs for keyboard users -->
       <!-- TODO: possibly add drag functionality to the chart -->
       <div class="y-values">
-        <input type="number" id="y0" placeholder="0" value="0" aria-label="y value at x=0">
-        <input type="number" id="y2" placeholder="0" value="0" aria-label="y value at x=2">
-        <input type="number" id="y4" placeholder="0" value="0" aria-label="y value at x=4">
-        <input type="number" id="y6" placeholder="0" value="0" aria-label="y value at x=6">
-        <input type="number" id="y8" placeholder="0" value="0" aria-label="y value at x=8">
+        <input type="number" id="y0" placeholder="0" value="0" aria-label="y value error" />
+        <input type="number" id="y1" placeholder="0" value="0" aria-label="y value error" />
+        <input type="number" id="y2" placeholder="0" value="0" aria-label="y value error" />
+        <input type="number" id="y3" placeholder="0" value="0" aria-label="y value error" />
+        <input type="number" id="y4" placeholder="0" value="0" aria-label="y value error" />
       </div>
       <!-- Slider to inspect x/y values and total monetary value -->
       <div class="controls">
-        <input id="x-value-slider" type="range" min="0" max="100" step="5">
-        <br>
+        <input id="x-value-slider" type="range" min="0" max="100" step="1" />
+        <br />
         <span id="x-value-display" aria-live="polite">X Value: 0</span><br />
         <span id="y-value-display" aria-live="polite">Y Value: 0</span><br />
         <span id="area-under-curve-display" aria-live="polite">Area Of Rectangle: 0</span>

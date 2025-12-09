@@ -69,26 +69,34 @@
   });
 
   // Wait for the Chart.js and chart annotation libraries to load
-  let waiter = setInterval(function () {
-    if (typeof Chart !== "undefined") {
-      clearInterval(waiter);
-      let annotation_waiter = setInterval(function () {
-        try {
-          if (Chart.registry.plugins.items.annotation !== undefined) {
-            if (chart_name !== "undefined") {
-              if (typeof Chart !== "undefined") {
-                clearInterval(annotation_waiter);
-                initializeChart();
+  if (
+    window.location.href.includes("lxp.huit.harvard.edu") ||
+    window.location.href.includes("harvardonline.harvard.edu")
+  ) {
+    let waiter = setInterval(function () {
+      if (typeof Chart !== "undefined") {
+        clearInterval(waiter);
+        let annotation_waiter = setInterval(function () {
+          try {
+            if (Chart.registry.plugins.items.annotation !== undefined) {
+              if (chart_name !== "undefined") {
+                if (typeof Chart !== "undefined") {
+                  clearInterval(annotation_waiter);
+                  initializeChart();
+                }
               }
             }
+          } catch (e) {
+            console.log("Waiting for Chart annotation plugin to load...");
+            return;
           }
-        } catch (e) {
-          console.log("Waiting for Chart annotation plugin to load...");
-          return;
-        }
-      }, 100);
-    }
-  }, 100);
+        }, 100);
+      }
+    }, 100);
+  }
+  else {
+    initializeChart();
+  }
 
   function initializeChart() {
     myChart = makeChart(ctx, chart_config[chart_name]);
@@ -97,8 +105,13 @@
     ctx.onpointerup = up_handler;
     ctx.onpointermove = null;
 
-    setEventListeners();
+    // Adjust the slider max value based on the chart x values
+    slider.min = Math.min(...chart_config[chart_name].x.values);
+    slider.max = Math.max(...chart_config[chart_name].x.values);
+    slider.value = (slider.min + slider.max) / 2;
+    slider.step = chart_config[chart_name].x.precision || 0.1;
 
+    setEventListeners();
     annotateWithVertical(
       Chart.getChart(ctx),
       Number(slider.value),
@@ -164,6 +177,7 @@
       const labels = chart.data.labels;
 
       let yValue = interpolateValues(chart, xValue) || 0;
+
       annotateWithVertical(chart, xValue, yValue);
     });
   }
@@ -217,8 +231,6 @@
           },
           x: {
             beginAtZero: true,
-            min: 0,
-            max: 10,
             title: {
               display: true,
               text: chart_config.x.label,
@@ -232,32 +244,39 @@
 
   // Linear interpolation to find the corresponding y value
   function interpolateValues(chart, xValue) {
+    console.log(`Interpolating for x=${xValue}`);
     const dataset = chart.data.datasets[0].data;
+    console.log(chart.data.datasets[0].data);
     const labels = chart.data.labels;
+    console.log(chart.data.labels);
     let yValue = null;
-    for (let i = 0; i < labels.length - 1; i++) {
+    for (let i = 0; i < dataset.length - 1; i++) {
+      console.log(labels[i], labels[i + 1]);
       if (xValue >= labels[i] && xValue <= labels[i + 1]) {
         const x0 = labels[i];
         const x1 = labels[i + 1];
         const y0 = dataset[i];
         const y1 = dataset[i + 1];
+        console.log(`Using points (${x0}, ${y0}) and (${x1}, ${y1}) for interpolation.`);
         // Linear interpolation formula
         yValue = y0 + ((y1 - y0) * (xValue - x0)) / (x1 - x0);
         break;
       }
     }
+    console.log(`Interpolated y=${yValue}`);
     return yValue;
   }
 
   // Adds a vertical line to the plot at the specified xValue.
   // TODO: switch this to a shaded box instead of lines.
   function annotateWithVertical(chart, xValue, yValue) {
+    console.log(`Annotating with x=${xValue}, y=${yValue}`);
     chart.options.plugins.annotation = {
       annotations: {
         box1: {
           type: "box",
           xMin: 0,
-          xMax: xValue / 25,
+          xMax: xValue / 10,
           yMin: 0,
           yMax: yValue,
           backgroundColor: "rgba(255, 0, 0, 0.3)",
