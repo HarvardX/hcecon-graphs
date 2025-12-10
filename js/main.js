@@ -109,7 +109,7 @@
     slider.min = Math.min(...chart_config[chart_name].x.values);
     slider.max = Math.max(...chart_config[chart_name].x.values);
     slider.value = (slider.min + slider.max) / 2;
-    slider.step = chart_config[chart_name].x.precision || 0.1;
+    slider.step = 0.1;
 
     setEventListeners();
     annotateWithVertical(
@@ -244,39 +244,35 @@
 
   // Linear interpolation to find the corresponding y value
   function interpolateValues(chart, xValue) {
-    console.log(`Interpolating for x=${xValue}`);
     const dataset = chart.data.datasets[0].data;
-    console.log(chart.data.datasets[0].data);
     const labels = chart.data.labels;
-    console.log(chart.data.labels);
     let yValue = null;
     for (let i = 0; i < dataset.length - 1; i++) {
-      console.log(labels[i], labels[i + 1]);
       if (xValue >= labels[i] && xValue <= labels[i + 1]) {
         const x0 = labels[i];
         const x1 = labels[i + 1];
         const y0 = dataset[i];
         const y1 = dataset[i + 1];
-        console.log(`Using points (${x0}, ${y0}) and (${x1}, ${y1}) for interpolation.`);
         // Linear interpolation formula
         yValue = y0 + ((y1 - y0) * (xValue - x0)) / (x1 - x0);
         break;
       }
     }
-    console.log(`Interpolated y=${yValue}`);
     return yValue;
   }
 
   // Adds a vertical line to the plot at the specified xValue.
   // TODO: switch this to a shaded box instead of lines.
   function annotateWithVertical(chart, xValue, yValue) {
-    console.log(`Annotating with x=${xValue}, y=${yValue}`);
+    const x_axis = chart_config[chart_name].x.values;
+    // Why in the world do I need x_scaler at all?
+    x_scaler = Math.abs((x_axis[0] - x_axis[x_axis.length - 1]) / (x_axis.length-1));
     chart.options.plugins.annotation = {
       annotations: {
         box1: {
           type: "box",
           xMin: 0,
-          xMax: xValue / 10,
+          xMax: xValue / x_scaler,
           yMin: 0,
           yMax: yValue,
           backgroundColor: "rgba(255, 0, 0, 0.3)",
@@ -358,7 +354,6 @@
         )} ${chart_config[chart_name].y.units}`;
       }
     }
-    // console.log(`X Value: ${xValue.toFixed(precision)}, Y Value: ${yValue.toFixed(precision)}`);
   }
 
   // Handlers taken from https://stackoverflow.com/a/59110888/1330737
