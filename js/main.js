@@ -84,7 +84,11 @@
     slider.max = max_value;
     slider.min = min_value;
     slider.step = Math.round(max_value - min_value) / 100;
-    slider.value = (max_value + min_value) / 2;
+    if (chart_config[chart_name].slider_features.custom_start){
+      slider.value = chart_config[chart_name].slider_features.custom_start_value;
+    }else{
+      slider.value = (max_value + min_value) / 2;
+    }
     slider_container.prepend(document.createElement("br"));
     slider_container.prepend(slider);
   }
