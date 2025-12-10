@@ -85,7 +85,6 @@
     slider.min = min_value;
     slider.step = Math.round(max_value - min_value) / 100;
     slider.value = (max_value + min_value) / 2;
-    console.log(slider.max, slider.min, slider.value);
     slider_container.prepend(document.createElement("br"));
     slider_container.prepend(slider);
   }
@@ -190,7 +189,8 @@
     value_inputs.forEach((el, index) => {
       el.addEventListener("input", function () {
         const chart = Chart.getChart(ctx);
-        chart.data.datasets[0].data[index] = Number(this.value) || 0;
+        chart.data.datasets[0].data[index].y = Number(this.value) || 0;
+        console.log(chart.data.datasets[0].data);
         chart.update();
         if (chart_config[chart_name].slider_features.use_slider) {
           annotateWithVertical(
@@ -221,15 +221,17 @@
   /////////////// Functions ///////////////
 
   function makeChart(ctx, chart_config) {
+    let data = chart_config.x.values.map((x, i) => ({ x: x, y: chart_config.y.values[i] }));
+    console.log(data);
     console.log(chart_config);
     return new Chart(ctx, {
       type: "line",
       data: {
-        labels: chart_config.x.values,
+        // labels: chart_config.x.values,
         datasets: [
           {
             label: chart_config.y.label,
-            data: chart_config.y.values,
+            data: data,
             borderWidth: 2,
             pointRadius: 5,
             pointHoverRadius: 7,
@@ -261,15 +263,16 @@
             beginAtZero: true,
             title: {
               display: true,
-              text: chart_config.y.label,
+              // text: chart_config.y.label,
               font: { size: 14, weight: "bold" },
             },
           },
           x: {
             beginAtZero: true,
+            type: "linear",
             title: {
               display: true,
-              text: chart_config.x.label,
+              // text: chart_config.x.label,
               font: { size: 14, weight: "bold" },
             },
           },
@@ -280,15 +283,16 @@
 
   // Linear interpolation to find the corresponding y value
   function interpolateValues(chart, xValue) {
-    const dataset = chart.data.datasets[0].data;
-    const labels = chart.data.labels;
+    let dataset = chart.data.datasets[0].data;
+    let x_values = dataset.map((d) => d.x);
+    let y_values = dataset.map((d) => d.y);
     let yValue = null;
     for (let i = 0; i < dataset.length - 1; i++) {
-      if (xValue >= labels[i] && xValue <= labels[i + 1]) {
-        const x0 = labels[i];
-        const x1 = labels[i + 1];
-        const y0 = dataset[i];
-        const y1 = dataset[i + 1];
+      if (xValue >= x_values[i] && xValue <= x_values[i + 1]) {
+        const x0 = x_values[i];
+        const x1 = x_values[i + 1];
+        const y0 = y_values[i];
+        const y1 = y_values[i + 1];
         // Linear interpolation formula
         yValue = y0 + ((y1 - y0) * (xValue - x0)) / (x1 - x0);
         break;
@@ -304,17 +308,13 @@
       return;
     }
     const x_axis = chart_config[chart_name].x.values;
-    // Why in the world do I need x_scaler at all?
-    x_scaler = Math.abs(
-      (x_axis[0] - x_axis[x_axis.length - 1]) / (x_axis.length - 1)
-    );
     if (chart_config[chart_name].slider_features.annotation_type === "line") {
       chart.options.plugins.annotation = {
         annotations: {
           line1: {
             type: "line",
-            xMin: xValue / x_scaler,
-            xMax: xValue / x_scaler,
+            xMin: xValue,
+            xMax: xValue,
             yMin: 0,
             yMax: yValue,
             borderColor: "rgba(255, 0, 0, 1)",
@@ -330,7 +330,7 @@
           box1: {
             type: "box",
             xMin: 0,
-            xMax: xValue / x_scaler,
+            xMax: xValue,
             yMin: 0,
             yMax: yValue,
             backgroundColor: "rgba(255, 0, 0, 0.3)",
@@ -470,7 +470,7 @@
       );
 
       // update y value of active data point
-      data.datasets[datasetIndex].data[activePoint.index] = yValue;
+      data.datasets[datasetIndex].data[activePoint.index].y = yValue;
       myChart.update();
       // Update the annotation
       if (chart_config[chart_name].slider_features.use_slider) {
@@ -486,6 +486,7 @@
   }
 
   function enforceRestrictions(value, data, restrictions) {
+    let y_values = data.map((d) => d.y);
     // Don't drag below 0
     if (restrictions.no_negative_values) {
       if (value < 0) {
@@ -495,14 +496,14 @@
     if (restrictions.monotonic_decreasing) {
       // Don't drag above previous point
       if (activePoint.index > 0) {
-        let previousYValue = data[activePoint.index - 1];
+        let previousYValue = y_values[activePoint.index - 1];
         if (value > previousYValue) {
           value = previousYValue;
         }
       }
       //Don't drag below next point
-      if (activePoint.index < data.length - 1) {
-        let nextYValue = data[activePoint.index + 1];
+      if (activePoint.index < y_values.length - 1) {
+        let nextYValue = y_values[activePoint.index + 1];
         if (value < nextYValue) {
           value = nextYValue;
         }
@@ -510,14 +511,14 @@
     } else if (restrictions.monotonic_increasing) {
       // Don't drag below previous point
       if (activePoint.index > 0) {
-        let previousYValue = data[activePoint.index - 1];
+        let previousYValue = y_values[activePoint.index - 1];
         if (value < previousYValue) {
           value = previousYValue;
         }
       }
       //Don't drag above next point
-      if (activePoint.index < data.length - 1) {
-        let nextYValue = data[activePoint.index + 1];
+      if (activePoint.index < y_values.length - 1) {
+        let nextYValue = y_values[activePoint.index + 1];
         if (value > nextYValue) {
           value = nextYValue;
         }
