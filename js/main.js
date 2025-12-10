@@ -221,7 +221,10 @@
   /////////////// Functions ///////////////
 
   function makeChart(ctx, chart_config) {
-    let data = chart_config.x.values.map((x, i) => ({ x: x, y: chart_config.y.values[i] }));
+    let data = chart_config.x.values.map((x, i) => ({
+      x: x,
+      y: chart_config.y.values[i],
+    }));
     console.log(data);
     console.log(chart_config);
     return new Chart(ctx, {
@@ -348,6 +351,7 @@
   function updateDisplays(xValue, yValue) {
     let x_precision = 2;
     let y_precision = 2;
+    let total_precision = 2;
     if (typeof chart_config[chart_name].x.precision === "number") {
       x_precision = -Math.log10(chart_config[chart_name].x.precision);
     }
@@ -383,10 +387,10 @@
         if (
           CURRENCY_SYMBOLS.includes(chart_config[chart_name].y.units.trim())
         ) {
-          // Currency symbols go before the number.
+          // Currency symbols go before the number and we always do 2 decimal places.
           y_text = `Y Value: ${
             chart_config[chart_name].y.units
-          }${yValue.toFixed(y_precision)}`;
+          }${yValue.toFixed(2)}`;
         } else {
           y_text += ` ${chart_config[chart_name].y.units}`;
         }
@@ -395,6 +399,10 @@
     yValueDisplay.textContent = y_text;
 
     // Only show currency symbol if there are no x units.
+    if (!chart_config[chart_name].total.show_total) {
+      return;
+    }
+    let total_text = "";
     if (chart_config[chart_name].y.units) {
       if (
         CURRENCY_SYMBOLS.includes(chart_config[chart_name].y.units.trim()) &&
@@ -404,15 +412,16 @@
           ))
       ) {
         // Currency symbols go before the number, and we always do 2 decimal places.
-        areaUnderCurveDisplay.textContent = `Area Of Rectangle: ${
+        total_text = `Area Of Rectangle: ${
           chart_config[chart_name].y.units
         }${area_of_rectangle.toFixed(2)}`;
       } else {
-        areaUnderCurveDisplay.textContent = `Area Of Rectangle: ${area_of_rectangle.toFixed(
-          precision
+        total_text = `Area Of Rectangle: ${area_of_rectangle.toFixed(
+          total_precision
         )} ${chart_config[chart_name].y.units}`;
       }
     }
+    areaUnderCurveDisplay.textContent = total_text;
   }
 
   // Handlers taken from https://stackoverflow.com/a/59110888/1330737
