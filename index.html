@@ -35,10 +35,10 @@
     chart_config[chart_name] = {
       title: "Demand Curve",
       x: {
-        values: [0,20,40,60,80,100],
+        values: [0,.200,.400,.600,.800,1.000],
         label: "Quantity",
         units: "", // use "units", "count", "items", etc. to keep x units from showing up in area of rectangle
-        precision: 1,
+        precision: 0.01,
       },
       y: {
         values: [25, 20, 15, 10, 5,0],
@@ -55,6 +55,10 @@
         monotonic_decreasing: false, // Can't set both monotonics true at once.
         no_negative_values: true,
       },
+      slider_features: {
+        use_slider: true,
+        annotation_type: "box", // "box", "line", or "none"
+      }
     };
     ////////// END CHART CONFIGURATION //////////
   </script>
@@ -68,16 +72,9 @@
       <!-- Inputs for keyboard users -->
       <!-- TODO: possibly add drag functionality to the chart -->
       <div class="y-values">
-        <input type="number" id="y0" placeholder="0" value="0" aria-label="y value error" />
-        <input type="number" id="y1" placeholder="0" value="0" aria-label="y value error" />
-        <input type="number" id="y2" placeholder="0" value="0" aria-label="y value error" />
-        <input type="number" id="y3" placeholder="0" value="0" aria-label="y value error" />
-        <input type="number" id="y4" placeholder="0" value="0" aria-label="y value error" />
       </div>
       <!-- Slider to inspect x/y values and total monetary value -->
-      <div class="controls">
-        <input id="x-value-slider" type="range" min="0" max="100" step="1" />
-        <br />
+      <div class="chart-controls">
         <span id="x-value-display" aria-live="polite">X Value: 0</span><br />
         <span id="y-value-display" aria-live="polite">Y Value: 0</span><br />
         <span id="area-under-curve-display" aria-live="polite">Area Of Rectangle: 0</span>

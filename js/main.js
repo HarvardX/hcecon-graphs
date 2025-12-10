@@ -1,6 +1,5 @@
 (() => {
   const ctx = document.getElementById(chart_name);
-  const slider = document.getElementById("x-value-slider");
   const xValueDisplay = document.getElementById("x-value-display");
   const yValueDisplay = document.getElementById("y-value-display");
   const areaUnderCurveDisplay = document.getElementById(
@@ -15,12 +14,10 @@
   var activePoint = null;
   var myChart; // Intentionally "global" within this code.
 
-  let value_inputs = document.querySelectorAll(".y-values input");
+  let value_inputs = Array.from(document.querySelectorAll(".y-values input"));
+  console.log(value_inputs);
   let validated = validateInitialValues();
   if (!validated) {
-    alert(
-      "Initial y values do not match your restrictions. See console for details."
-    );
     return;
   }
 
@@ -59,14 +56,39 @@
 
   //////////// Initial Setup ////////////
 
-  // Set initial values from the chart_config variable.
-  value_inputs.forEach((el, index) => {
-    el.value = chart_config[chart_name].y.values[index];
-    el.setAttribute(
+  // Create input fields for each y value
+  let y_value_container = document.querySelector(".y-values");
+  chart_config[chart_name].y.values.forEach((value, index) => {
+    let input = document.createElement("input");
+    input.type = "number";
+    input.value = value;
+    input.setAttribute("placeholder", "0");
+    input.setAttribute(
       "aria-label",
       `y value at x=${chart_config[chart_name].x.values[index]}`
     );
+    input.value = value;
+    y_value_container.appendChild(input);
+    value_inputs.push(input);
   });
+
+  // Create slider for x value selection, if we're using a slider.
+  let slider;
+  if (chart_config[chart_name].slider_features.use_slider) {
+    let slider_container = document.querySelector(".chart-controls");
+    let max_value = Math.max(...chart_config[chart_name].x.values);
+    let min_value = Math.min(...chart_config[chart_name].x.values);
+    slider = document.createElement("input");
+    slider.type = "range";
+    slider.id = "x-value-slider";
+    slider.max = max_value;
+    slider.min = min_value;
+    slider.step = Math.round(max_value - min_value) / 100;
+    slider.value = (max_value + min_value) / 2;
+    console.log(slider.max, slider.min, slider.value);
+    slider_container.prepend(document.createElement("br"));
+    slider_container.prepend(slider);
+  }
 
   // Wait for the Chart.js and chart annotation libraries to load
   if (
@@ -93,8 +115,7 @@
         }, 100);
       }
     }, 100);
-  }
-  else {
+  } else {
     initializeChart();
   }
 
@@ -105,22 +126,33 @@
     ctx.onpointerup = up_handler;
     ctx.onpointermove = null;
 
-    // Adjust the slider max value based on the chart x values
-    slider.min = Math.min(...chart_config[chart_name].x.values);
-    slider.max = Math.max(...chart_config[chart_name].x.values);
-    slider.value = (slider.min + slider.max) / 2;
-    slider.step = 0.1;
-
     setEventListeners();
-    annotateWithVertical(
-      Chart.getChart(ctx),
-      Number(slider.value),
-      interpolateValues(Chart.getChart(ctx), Number(slider.value))
-    );
+    if (chart_config[chart_name].slider_features.use_slider) {
+      annotateWithVertical(
+        Chart.getChart(ctx),
+        Number(slider.value),
+        interpolateValues(Chart.getChart(ctx), Number(slider.value))
+      );
+    }
   }
 
   ////////// Validate initial y values ////////
   function validateInitialValues() {
+    if (chart_config[chart_name].restrictions.no_negative_values) {
+      if (Math.min(...chart_config[chart_name].y.values) < 0) {
+        alert("Error: y.values must not contain negative values.");
+        return false;
+      }
+    }
+
+    if (
+      chart_config[chart_name].y.values.length !==
+      chart_config[chart_name].x.values.length
+    ) {
+      alert("Error: You must provide equal numbers of x and y values.");
+      return false;
+    }
+
     temp = Array.from(chart_config[chart_name].y.values);
     temp.sort(function (a, b) {
       return a - b;
@@ -160,26 +192,30 @@
         const chart = Chart.getChart(ctx);
         chart.data.datasets[0].data[index] = Number(this.value) || 0;
         chart.update();
-        annotateWithVertical(
-          chart,
-          Number(slider.value),
-          interpolateValues(chart, Number(slider.value))
-        );
+        if (chart_config[chart_name].slider_features.use_slider) {
+          annotateWithVertical(
+            chart,
+            Number(slider.value),
+            interpolateValues(chart, Number(slider.value))
+          );
+        }
       });
     });
 
     // Update the displayed x and y values based on the slider position
-    slider.addEventListener("input", function () {
-      const xValue = Number(this.value);
+    if (chart_config[chart_name].slider_features.use_slider) {
+      slider.addEventListener("input", function () {
+        const xValue = Number(this.value);
 
-      const chart = Chart.getChart(ctx);
-      const dataset = chart.data.datasets[0].data;
-      const labels = chart.data.labels;
+        const chart = Chart.getChart(ctx);
+        const dataset = chart.data.datasets[0].data;
+        const labels = chart.data.labels;
 
-      let yValue = interpolateValues(chart, xValue) || 0;
+        let yValue = interpolateValues(chart, xValue) || 0;
 
-      annotateWithVertical(chart, xValue, yValue);
-    });
+        annotateWithVertical(chart, xValue, yValue);
+      });
+    }
   }
 
   /////////////// Functions ///////////////
@@ -264,23 +300,46 @@
   // Adds a vertical line to the plot at the specified xValue.
   // TODO: switch this to a shaded box instead of lines.
   function annotateWithVertical(chart, xValue, yValue) {
+    if (chart_config[chart_name].slider_features.annotation_type === "none") {
+      return;
+    }
     const x_axis = chart_config[chart_name].x.values;
     // Why in the world do I need x_scaler at all?
-    x_scaler = Math.abs((x_axis[0] - x_axis[x_axis.length - 1]) / (x_axis.length-1));
-    chart.options.plugins.annotation = {
-      annotations: {
-        box1: {
-          type: "box",
-          xMin: 0,
-          xMax: xValue / x_scaler,
-          yMin: 0,
-          yMax: yValue,
-          backgroundColor: "rgba(255, 0, 0, 0.3)",
-          borderColor: "rgba(255, 0, 0, 0.7)",
-          borderWidth: 2,
+    x_scaler = Math.abs(
+      (x_axis[0] - x_axis[x_axis.length - 1]) / (x_axis.length - 1)
+    );
+    if (chart_config[chart_name].slider_features.annotation_type === "line") {
+      chart.options.plugins.annotation = {
+        annotations: {
+          line1: {
+            type: "line",
+            xMin: xValue / x_scaler,
+            xMax: xValue / x_scaler,
+            yMin: 0,
+            yMax: yValue,
+            borderColor: "rgba(255, 0, 0, 1)",
+            borderWidth: 2,
+          },
         },
-      },
-    };
+      };
+    } else if (
+      chart_config[chart_name].slider_features.annotation_type === "box"
+    ) {
+      chart.options.plugins.annotation = {
+        annotations: {
+          box1: {
+            type: "box",
+            xMin: 0,
+            xMax: xValue / x_scaler,
+            yMin: 0,
+            yMax: yValue,
+            backgroundColor: "rgba(255, 0, 0, 0.3)",
+            borderColor: "rgba(255, 0, 0, 0.7)",
+            borderWidth: 2,
+          },
+        },
+      };
+    }
     chart.update();
     updateDisplays(xValue, yValue);
   }
@@ -344,10 +403,10 @@
             chart_config[chart_name].x.units.trim().toLowerCase()
           ))
       ) {
-        // Currency symbols go before the number.
+        // Currency symbols go before the number, and we always do 2 decimal places.
         areaUnderCurveDisplay.textContent = `Area Of Rectangle: ${
           chart_config[chart_name].y.units
-        }${area_of_rectangle.toFixed(total_precision)}`;
+        }${area_of_rectangle.toFixed(2)}`;
       } else {
         areaUnderCurveDisplay.textContent = `Area Of Rectangle: ${area_of_rectangle.toFixed(
           precision
@@ -414,11 +473,13 @@
       data.datasets[datasetIndex].data[activePoint.index] = yValue;
       myChart.update();
       // Update the annotation
-      annotateWithVertical(
-        myChart,
-        Number(slider.value),
-        interpolateValues(myChart, Number(slider.value))
-      );
+      if (chart_config[chart_name].slider_features.use_slider) {
+        annotateWithVertical(
+          myChart,
+          Number(slider.value),
+          interpolateValues(myChart, Number(slider.value))
+        );
+      }
       // Update the corresponding input field
       value_inputs[activePoint.index].value = yValue.toFixed(2);
     }
