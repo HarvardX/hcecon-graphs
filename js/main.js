@@ -53,46 +53,6 @@
       document.head.appendChild(scriptTag);
     });
   }
-
-  //////////// Initial Setup ////////////
-
-  // Create input fields for each y value
-  let y_value_container = document.querySelector(".y-values");
-  chart_config[chart_name].y.values.forEach((value, index) => {
-    let input = document.createElement("input");
-    input.type = "number";
-    input.value = value;
-    input.setAttribute("placeholder", "0");
-    input.setAttribute(
-      "aria-label",
-      `y value at x=${chart_config[chart_name].x.values[index]}`
-    );
-    input.value = value;
-    y_value_container.appendChild(input);
-    value_inputs.push(input);
-  });
-
-  // Create slider for x value selection, if we're using a slider.
-  let slider;
-  if (chart_config[chart_name].slider_features.use_slider) {
-    let slider_container = document.querySelector(".chart-controls");
-    let max_value = Math.max(...chart_config[chart_name].x.values);
-    let min_value = Math.min(...chart_config[chart_name].x.values);
-    slider = document.createElement("input");
-    slider.type = "range";
-    slider.id = "x-value-slider";
-    slider.max = max_value;
-    slider.min = min_value;
-    slider.step = Math.round(max_value - min_value) / 100;
-    if (chart_config[chart_name].slider_features.custom_start){
-      slider.value = chart_config[chart_name].slider_features.custom_start_value;
-    }else{
-      slider.value = (max_value + min_value) / 2;
-    }
-    slider_container.prepend(document.createElement("br"));
-    slider_container.prepend(slider);
-  }
-
   // Wait for the Chart.js and chart annotation libraries to load
   if (
     window.location.href.includes("lxp.huit.harvard.edu") ||
@@ -107,7 +67,7 @@
               if (chart_name !== "undefined") {
                 if (typeof Chart !== "undefined") {
                   clearInterval(annotation_waiter);
-                  initializeChart();
+                  letsGo();
                 }
               }
             }
@@ -119,10 +79,60 @@
       }
     }, 100);
   } else {
-    initializeChart();
+    letsGo();
   }
 
-  function initializeChart() {
+  /**
+   * Sets up input fields and the slider,
+   * then passes to the chart initialization function.
+   */
+  function letsGo() {
+    // Create input fields for each y value
+    let y_value_container = document.querySelector(".y-values");
+    chart_config[chart_name].y.values.forEach((value, index) => {
+      let input = document.createElement("input");
+      input.type = "number";
+      input.value = value;
+      input.setAttribute("placeholder", "0");
+      input.setAttribute(
+        "aria-label",
+        `y value at x=${chart_config[chart_name].x.values[index]}`
+      );
+      input.value = value;
+      y_value_container.appendChild(input);
+      value_inputs.push(input);
+    });
+
+    // Create slider for x value selection, if we're using a slider.
+    let slider;
+    if (chart_config[chart_name].slider_features.use_slider) {
+      let slider_container = document.querySelector(".chart-controls");
+      let max_value = Math.max(...chart_config[chart_name].x.values);
+      let min_value = Math.min(...chart_config[chart_name].x.values);
+      slider = document.createElement("input");
+      slider.type = "range";
+      slider.id = "x-value-slider";
+      slider.max = max_value;
+      slider.min = min_value;
+      slider.step = Math.round(max_value - min_value) / 100;
+      if (chart_config[chart_name].slider_features.custom_start) {
+        slider.value =
+          chart_config[chart_name].slider_features.custom_start_value;
+      } else {
+        slider.value = (max_value + min_value) / 2;
+      }
+      slider_container.prepend(document.createElement("br"));
+      slider_container.prepend(slider);
+    }
+
+    initializeChart(slider);
+  }
+
+  /**
+   * Sets up the chart and its listeners.
+   * @param {*} slider: the slider element, if it exists.
+   */
+  function initializeChart(slider) {
     myChart = makeChart(ctx, chart_config[chart_name]);
     // set pointer event handlers for canvas element
     ctx.onpointerdown = down_handler;
@@ -139,7 +149,11 @@
     }
   }
 
-  ////////// Validate initial y values ////////
+  /**
+   * Checks for monotnicity, negative values,
+   * and unequal lengths of x and y arrays.
+   * @returns {boolean} whether the initial values are valid.
+   */
   function validateInitialValues() {
     if (chart_config[chart_name].restrictions.no_negative_values) {
       if (Math.min(...chart_config[chart_name].y.values) < 0) {
@@ -187,7 +201,9 @@
     return true;
   }
 
-  /////////////// Event Listeners ///////////////
+  /**
+   * Sets up event listeners for the y value inputs and the slider.
+   */
   function setEventListeners() {
     // Update chart when y value inputs change
     value_inputs.forEach((el, index) => {
@@ -197,6 +213,7 @@
         console.log(chart.data.datasets[0].data);
         chart.update();
         if (chart_config[chart_name].slider_features.use_slider) {
+          let slider = document.getElementById("x-value-slider");
           annotateWithVertical(
             chart,
             Number(slider.value),
@@ -208,6 +225,7 @@
 
     // Update the displayed x and y values based on the slider position
     if (chart_config[chart_name].slider_features.use_slider) {
+      let slider = document.getElementById("x-value-slider");
       slider.addEventListener("input", function () {
         const xValue = Number(this.value);
 
@@ -222,8 +240,12 @@
     }
   }
 
-  /////////////// Functions ///////////////
-
+  /**
+   * Generates a new Chart.js chart within the ctx canvas element.
+   * @param {*} ctx
+   * @param {*} chart_config
+   * @returns
+   */
   function makeChart(ctx, chart_config) {
     let data = chart_config.x.values.map((x, i) => ({
       x: x,
@@ -288,7 +310,7 @@
     });
   }
 
-  // Linear interpolation to find the corresponding y value
+  /** Linear interpolation to find the corresponding y value */
   function interpolateValues(chart, xValue) {
     let dataset = chart.data.datasets[0].data;
     let x_values = dataset.map((d) => d.x);
@@ -308,8 +330,7 @@
     return yValue;
   }
 
-  // Adds a vertical line to the plot at the specified xValue.
-  // TODO: switch this to a shaded box instead of lines.
+  /** Adds a vertical line to the plot at the specified xValue. */
   function annotateWithVertical(chart, xValue, yValue) {
     if (chart_config[chart_name].slider_features.annotation_type === "none") {
       return;
@@ -351,7 +372,9 @@
     updateDisplays(xValue, yValue);
   }
 
-  // Update the displayed x and y values
+  /** Updates the displayed x and y values, and the area
+   * of the rectangle annotation if we're using that.
+   */
   function updateDisplays(xValue, yValue) {
     let x_precision = 2;
     let y_precision = 2;
@@ -428,8 +451,10 @@
     areaUnderCurveDisplay.textContent = total_text;
   }
 
+  //////////////////////////////////////////////////////////////////
   // Handlers taken from https://stackoverflow.com/a/59110888/1330737
   // Thanks to user MartinCR https://stackoverflow.com/users/5058026/martin-cr
+  //////////////////////////////////////////////////////////////////
 
   function down_handler(event) {
     document.getElementById(chart_name).getContext("2d");
@@ -487,6 +512,7 @@
       myChart.update();
       // Update the annotation
       if (chart_config[chart_name].slider_features.use_slider) {
+        let slider = document.getElementById("x-value-slider");
         annotateWithVertical(
           myChart,
           Number(slider.value),
@@ -498,6 +524,16 @@
     }
   }
 
+  //////////////////////
+
+  /**
+   * Enforces restrictions on the y values:
+   * monotonicity and no negative values if specified.
+   * @param {*} value
+   * @param {*} data
+   * @param {*} restrictions
+   * @returns
+   */
   function enforceRestrictions(value, data, restrictions) {
     let y_values = data.map((d) => d.y);
     // Don't drag below 0
@@ -540,7 +576,7 @@
     return value;
   }
 
-  // map value to other coordinate system
+  /** Mouse position conversion */
   function map(value, start1, stop1, start2, stop2) {
     return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
   }
