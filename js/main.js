@@ -1,123 +1,184 @@
-(() => {
-  const ctx = document.getElementById(chart_name);
-  const xValueDisplay = document.getElementById("x-value-display");
-  const yValueDisplay = document.getElementById("y-value-display");
-  const areaUnderCurveDisplay = document.getElementById(
-    "area-under-curve-display"
-  );
+"use strict";
+(async () => {
+  // Global-ish variables
+  let activePoint = null;
   // prettier-ignore
   const CURRENCY_SYMBOLS = ["$", "¢", "€", "£", "¥", "₹", "₩", "₽", "₺", "₪", "₫", "฿", "₴", "₦", "₱"];
   // prettier-ignore
   const QUANTITY_WORDS = ["units", "items", "widgets", "things", "count"];
-  const TE_ID = document.currentScript.getAttribute("data-te-ids");
 
-  var activePoint = null;
-  var myChart; // Intentionally "global" within this code.
-
-  let value_inputs = Array.from(document.querySelectorAll(".y-values input"));
-  console.log(value_inputs);
-  let validated = validateInitialValues();
-  if (!validated) {
-    return;
-  }
-
-  ///////////////// Script Loading //////////////////
-  // Load the other scripts from the "media" section of all places,
-  // because then we can ensure they load in order.
-  // This gets skipped if we're testing things outside the LXP.
-  ///////////////////////////////////////////////////
-  if (
-    window.location.href.includes("lxp.huit.harvard.edu") ||
-    window.location.href.includes("harvardonline.harvard.edu")
-  ) {
-    let media_object = window.lxp.te[TE_ID].media;
-    let media_names = Object.keys(media_object);
-    let reverse_lookup = {};
-    media_names.forEach((name) => {
-      reverse_lookup[media_object[name].filename] = name;
-    });
-    let scripts = [];
-    // Script load order is defined in the javascript section of the TE.
-    script_load_order.forEach((name) => {
-      if (name in reverse_lookup) {
-        scripts.push(media_object[reverse_lookup[name]].publicUrl);
-      } else {
-        console.error(`Error: Script ${name} not found in media object.`);
-      }
-    });
-    scripts.forEach((script) => {
-      let scriptTag = document.createElement("script");
-      scriptTag.src = script;
-      // Make sure they load in order.
-      scriptTag.async = false;
-      document.head.appendChild(scriptTag);
-    });
-  }
-  // Wait for the Chart.js and chart annotation libraries to load
-  if (
-    window.location.href.includes("lxp.huit.harvard.edu") ||
-    window.location.href.includes("harvardonline.harvard.edu")
-  ) {
+  // Make sure the length of the chart_config object matches the
+  // number of relevant charts. If not, wait until it does.
+  let num_charts = document.querySelectorAll(".hx-chartjs").length;
+  let count = 0;
+  if (Object.keys(chart_config).length !== num_charts) {
     let waiter = setInterval(function () {
-      if (typeof Chart !== "undefined") {
+      num_charts = document.querySelectorAll(".hx-chartjs").length;
+      if (Object.keys(chart_config).length === num_charts) {
         clearInterval(waiter);
-        let annotation_waiter = setInterval(function () {
-          try {
-            if (Chart.registry.plugins.items.annotation !== undefined) {
-              if (chart_name !== "undefined") {
-                if (typeof Chart !== "undefined") {
-                  clearInterval(annotation_waiter);
-                  letsGo();
-                }
-              }
-            }
-          } catch (e) {
-            console.log("Waiting for Chart annotation plugin to load...");
-            return;
-          }
-        }, 100);
+        main();
+      }
+      count += 1;
+      if (count > 100) {
+        // You get 10 seconds to load the charts.
+        console.error("Error: Chart configuration did not load in time.");
+        clearInterval(waiter);
+        return;
       }
     }, 100);
   } else {
-    letsGo();
+    main();
+  }
+
+  async function main() {
+    let chart_names = Object.keys(chart_config);
+    for (let name of chart_names) {
+      // Make sure the config contains the chart's own name
+      chart_config[name]["name"] = name;
+      console.log(chart_config[name]);
+
+      let validated = validateInitialValues(chart_config[name]);
+      if (!validated) {
+        return;
+      }
+      loadLibraries(chart_config[name]);
+    }
+  }
+
+  /** Script loading
+  // Loads the other scripts from the "media" section of all places,
+  // because then we can ensure they load in order.
+  // This gets skipped if we're testing things outside the LXP.
+  */
+  async function loadLibraries(config) {
+    // Insert the scripts via creating script tags
+    if (
+      window.location.href.includes("lxp.huit.harvard.edu") ||
+      window.location.href.includes("harvardonline.harvard.edu")
+    ) {
+      // If the scripts are already loaded, skip loading them again.
+      // `script_load_order` is defined in the javascript section of the TE.
+      let num_scripts_needed = script_load_order.length;
+      for (let script of script_load_order) {
+        let script_check = document.querySelector(`script[src*="${script}"]`);
+        if (script_check) {
+          num_scripts_needed -= 1;
+        }
+      }
+      if (num_scripts_needed === 0) {
+        return true;
+      }
+
+      let media_object = window.lxp.te[config.te_id].media;
+      let media_names = Object.keys(media_object);
+      let reverse_lookup = {};
+      media_names.forEach((name) => {
+        reverse_lookup[media_object[name].filename] = name;
+      });
+      let scripts = [];
+
+      script_load_order.forEach((name) => {
+        if (name in reverse_lookup) {
+          scripts.push(media_object[reverse_lookup[name]].publicUrl);
+        } else {
+          console.error(`Error: Script ${name} not found in media object.`);
+          return false;
+        }
+      });
+      scripts.forEach((script) => {
+        let scriptTag = document.createElement("script");
+        scriptTag.src = script;
+        // Make sure they load in order.
+        scriptTag.async = false;
+        document.head.appendChild(scriptTag);
+      });
+    }
+
+    // Wait for the Chart.js and chart annotation libraries to load
+    if (
+      window.location.href.includes("lxp.huit.harvard.edu") ||
+      window.location.href.includes("harvardonline.harvard.edu")
+    ) {
+      let count = 0;
+      let waiter = setInterval(function () {
+        if (typeof Chart !== "undefined") {
+          clearInterval(waiter);
+          let annotation_waiter = setInterval(function () {
+            try {
+              if (Chart.registry.plugins.items.annotation !== undefined) {
+                if (config.name !== "undefined") {
+                  if (typeof Chart !== "undefined") {
+                    clearInterval(annotation_waiter);
+                    letsGo(chart_config[config.name]);
+                    return true;
+                  }
+                }
+              } else {
+                console.log(
+                  "Waiting for Chart.js annotation library to load..."
+                );
+              }
+            } catch (e) {
+              console.log("Error: " + e);
+            }
+          }, 100);
+        } else {
+          console.log("Waiting for Chart.js to load...");
+        }
+        count += 1;
+        if (count > 100) {
+          console.error(
+            "Error: Chart.js annotation library did not load in time."
+          );
+          clearInterval(waiter);
+          return false;
+        }
+      }, 100);
+    } else {
+      return true;
+    }
   }
 
   /**
    * Sets up input fields and the slider,
    * then passes to the chart initialization function.
    */
-  function letsGo() {
+  function letsGo(config) {
+    const ctx = document.querySelector("#" + config.name);
     // Create input fields for each y value
     let y_value_container = document.querySelector(".y-values");
-    chart_config[chart_name].y.values.forEach((value, index) => {
+    let value_inputs = [];
+    config.y.values.forEach((value, index) => {
       let input = document.createElement("input");
       input.type = "number";
       input.value = value;
       input.setAttribute("placeholder", "0");
       input.setAttribute(
         "aria-label",
-        `y value at x=${chart_config[chart_name].x.values[index]}`
+        `y value at x=${config.x.values[index]}`
       );
       input.value = value;
+      if (!config.editable) {
+        input.disabled = true;
+      }
       y_value_container.appendChild(input);
       value_inputs.push(input);
     });
 
     // Create slider for x value selection, if we're using a slider.
     let slider;
-    if (chart_config[chart_name].slider_features.use_slider) {
+    if (config.slider_features.use_slider) {
       let slider_container = document.querySelector(".chart-controls");
-      let max_value = Math.max(...chart_config[chart_name].x.values);
-      let min_value = Math.min(...chart_config[chart_name].x.values);
+      let max_value = Math.max(...config.x.values);
+      let min_value = Math.min(...config.x.values);
       slider = document.createElement("input");
       slider.type = "range";
-      slider.id = "x-value-slider";
+      slider.classList.add("x-value-slider");
       slider.max = max_value;
       slider.min = min_value;
       slider.step = Math.round(max_value - min_value) / 100;
-      if (chart_config[chart_name].slider_features.custom_start) {
-        slider.value =
-          chart_config[chart_name].slider_features.custom_start_value;
+      if (config.slider_features.custom_start) {
+        slider.value = config.slider_features.custom_start_value;
       } else {
         slider.value = (max_value + min_value) / 2;
       }
@@ -125,24 +186,33 @@
       slider_container.prepend(slider);
     }
 
-    initializeChart(slider);
+    initializeChart(config, value_inputs, slider);
   }
 
   /**
    * Sets up the chart and its listeners.
    * @param {*} slider: the slider element, if it exists.
    */
-  function initializeChart(slider) {
-    myChart = makeChart(ctx, chart_config[chart_name]);
-    // set pointer event handlers for canvas element
-    ctx.onpointerdown = down_handler;
-    ctx.onpointerup = up_handler;
-    ctx.onpointermove = null;
+  function initializeChart(ctx, config, value_inputs, slider) {
+    myChart = makeChart(ctx, config);
 
-    setEventListeners();
-    if (chart_config[chart_name].slider_features.use_slider) {
+    // If the chart is editable,
+    // set pointer event handlers for canvas element
+    if (config.editable) {
+      ctx.onpointerdown = function (event) {
+        return down_handler(event, config);
+      };
+      ctx.onpointerup = function (event) {
+        return up_handler(event, config);
+      };
+      ctx.onpointermove = null;
+      setInputListeners(ctx, config, value_inputs);
+    }
+
+    if (config.slider_features.use_slider) {
+      setSliderListener(ctx, config);
       annotateWithVertical(
-        Chart.getChart(ctx),
+        config,
         Number(slider.value),
         interpolateValues(Chart.getChart(ctx), Number(slider.value))
       );
@@ -154,44 +224,39 @@
    * and unequal lengths of x and y arrays.
    * @returns {boolean} whether the initial values are valid.
    */
-  function validateInitialValues() {
-    if (chart_config[chart_name].restrictions.no_negative_values) {
-      if (Math.min(...chart_config[chart_name].y.values) < 0) {
+  function validateInitialValues(config) {
+    if (config.restrictions.no_negative_values) {
+      if (Math.min(...config.y.values) < 0) {
         alert("Error: y.values must not contain negative values.");
         return false;
       }
     }
 
-    if (
-      chart_config[chart_name].y.values.length !==
-      chart_config[chart_name].x.values.length
-    ) {
+    if (config.y.values.length !== config.x.values.length) {
       alert("Error: You must provide equal numbers of x and y values.");
       return false;
     }
 
-    temp = Array.from(chart_config[chart_name].y.values);
+    let temp = Array.from(config.y.values);
     temp.sort(function (a, b) {
       return a - b;
     });
     if (
-      JSON.stringify(temp) !==
-        JSON.stringify(chart_config[chart_name].y.values) &&
-      chart_config[chart_name].restrictions.monotonic_increasing
+      JSON.stringify(temp) !== JSON.stringify(config.y.values) &&
+      config.restrictions.monotonic_increasing
     ) {
       console.error(
         "Error: y.values must be in increasing order if you want monotonic increasing."
       );
       return false;
     }
-    temp = Array.from(chart_config[chart_name].y.values);
+    temp = Array.from(config.y.values);
     temp.sort(function (a, b) {
       return b - a;
     });
     if (
-      JSON.stringify(temp) !==
-        JSON.stringify(chart_config[chart_name].y.values) &&
-      chart_config[chart_name].restrictions.monotonic_decreasing
+      JSON.stringify(temp) !== JSON.stringify(config.y.values) &&
+      config.restrictions.monotonic_decreasing
     ) {
       console.error(
         "Error: y.values must be in decreasing order if you want monotonic decreasing."
@@ -202,64 +267,68 @@
   }
 
   /**
-   * Sets up event listeners for the y value inputs and the slider.
+   * Sets up event listeners for the y value inputs
    */
-  function setEventListeners() {
+  function setInputListeners(ctx, config, value_inputs) {
     // Update chart when y value inputs change
     value_inputs.forEach((el, index) => {
       el.addEventListener("input", function () {
         const chart = Chart.getChart(ctx);
         chart.data.datasets[0].data[index].y = Number(this.value) || 0;
-        console.log(chart.data.datasets[0].data);
         chart.update();
-        if (chart_config[chart_name].slider_features.use_slider) {
-          let slider = document.getElementById("x-value-slider");
+        if (config.slider_features.use_slider) {
+          let slider = ctx.parentElement.querySelector(".x-value-slider");
           annotateWithVertical(
-            chart,
+            config,
             Number(slider.value),
             interpolateValues(chart, Number(slider.value))
           );
         }
       });
     });
+  }
 
+  /**
+   * Sets up event listeners for the slider
+   */
+  function setSliderListener(ctx, config) {
     // Update the displayed x and y values based on the slider position
-    if (chart_config[chart_name].slider_features.use_slider) {
-      let slider = document.getElementById("x-value-slider");
-      slider.addEventListener("input", function () {
-        const xValue = Number(this.value);
+    let slider = ctx.parentElement.querySelector(".x-value-slider");
+    slider.addEventListener("input", function () {
+      const xValue = Number(this.value);
 
-        const chart = Chart.getChart(ctx);
-        const dataset = chart.data.datasets[0].data;
-        const labels = chart.data.labels;
+      const chart = Chart.getChart(ctx);
+      const dataset = chart.data.datasets[0].data;
+      const labels = chart.data.labels;
 
-        let yValue = interpolateValues(chart, xValue) || 0;
+      let yValue = interpolateValues(chart, xValue) || 0;
 
-        annotateWithVertical(chart, xValue, yValue);
-      });
-    }
+      annotateWithVertical(config, xValue, yValue);
+    });
   }
 
   /**
    * Generates a new Chart.js chart within the ctx canvas element.
    * @param {*} ctx
-   * @param {*} chart_config
+   * @param {*} config
    * @returns
    */
-  function makeChart(ctx, chart_config) {
-    let data = chart_config.x.values.map((x, i) => ({
+  function makeChart(ctx, config) {
+    let data = config.x.values.map((x, i) => ({
       x: x,
-      y: chart_config.y.values[i],
+      y: config.y.values[i],
     }));
+    let start_x_at_zero = Math.min(...config.x.values) === 0;
+    let start_y_at_zero = Math.min(...config.y.values) === 0;
     console.log(data);
-    console.log(chart_config);
+    console.log(config);
     return new Chart(ctx, {
       type: "line",
       data: {
-        // labels: chart_config.x.values,
+        // labels: config.x.values,
         datasets: [
           {
-            label: chart_config.y.label,
+            label: config.y.label,
             data: data,
             borderWidth: 2,
             pointRadius: 5,
@@ -278,7 +347,7 @@
           },
           title: {
             display: true,
-            text: chart_config.title,
+            text: config.title,
             font: {
               size: 18,
             },
@@ -289,19 +358,25 @@
         },
         scales: {
           y: {
-            beginAtZero: true,
+            min: Math.min(...config.y.values),
+            ticks: {
+              beginAtZero: start_y_at_zero,
+            },
             title: {
               display: true,
-              // text: chart_config.y.label,
+              text: config.y.label,
               font: { size: 14, weight: "bold" },
             },
           },
           x: {
-            beginAtZero: true,
+            min: Math.min(...config.x.values),
+            ticks: {
+              beginAtZero: start_x_at_zero,
+            },
             type: "linear",
             title: {
               display: true,
-              // text: chart_config.x.label,
+              text: config.x.label,
               font: { size: 14, weight: "bold" },
             },
           },
@@ -331,12 +406,13 @@
   }
 
   /** Adds a vertical line to the plot at the specified xValue. */
-  function annotateWithVertical(chart, xValue, yValue) {
-    if (chart_config[chart_name].slider_features.annotation_type === "none") {
+  function annotateWithVertical(config, xValue, yValue) {
+    const chart = Chart.getChart(config.name);
+    if (config.slider_features.annotation_type === "none") {
       return;
     }
-    const x_axis = chart_config[chart_name].x.values;
-    if (chart_config[chart_name].slider_features.annotation_type === "line") {
+    const x_axis = config.x.values;
+    if (config.slider_features.annotation_type === "line") {
       chart.options.plugins.annotation = {
         annotations: {
           line1: {
@@ -350,9 +426,7 @@
           },
         },
       };
-    } else if (
-      chart_config[chart_name].slider_features.annotation_type === "box"
-    ) {
+    } else if (config.slider_features.annotation_type === "box") {
       chart.options.plugins.annotation = {
         annotations: {
           box1: {
@@ -369,24 +443,34 @@
       };
     }
     chart.update();
-    updateDisplays(xValue, yValue);
+    updateDisplays(config, xValue, yValue);
   }
 
   /** Updates the displayed x and y values, and the area
    * of the rectangle annotation if we're using that.
    */
-  function updateDisplays(xValue, yValue) {
+  function updateDisplays(config, xValue, yValue) {
+    let xValueDisplay = document
+      .querySelector(`#${config.name}`)
+      .parentElement.querySelector(".x-value-display");
+    let yValueDisplay = document
+      .querySelector(`#${config.name}`)
+      .parentElement.querySelector(".y-value-display");
+    let areaUnderCurveDisplay = document
+      .querySelector(`#${config.name}`)
+      .parentElement.querySelector(".area-under-curve-display");
     let x_precision = 2;
     let y_precision = 2;
     let total_precision = 2;
-    if (typeof chart_config[chart_name].x.precision === "number") {
-      x_precision = -Math.log10(chart_config[chart_name].x.precision);
+
+    if (typeof config.x.precision === "number") {
+      x_precision = -Math.log10(config.x.precision);
     }
-    if (typeof chart_config[chart_name].y.precision === "number") {
-      y_precision = -Math.log10(chart_config[chart_name].y.precision);
+    if (typeof config.y.precision === "number") {
+      y_precision = -Math.log10(config.y.precision);
     }
-    if (chart_config[chart_name].total.precision) {
-      total_precision = -Math.log10(chart_config[chart_name].total.precision);
+    if (config.total.precision) {
+      total_precision = -Math.log10(config.total.precision);
     } else {
       total_precision = Math.max(x_precision, y_precision);
     }
@@ -395,57 +479,50 @@
       (Math.round(yValue * 10 ** y_precision) / 10 ** y_precision);
 
     let x_text = `X Value: ${xValue.toFixed(x_precision)}`;
-    if (chart_config[chart_name].x.units) {
-      if (CURRENCY_SYMBOLS.includes(chart_config[chart_name].x.units.trim())) {
+    if (config.x.units) {
+      if (CURRENCY_SYMBOLS.includes(config.x.units.trim())) {
         // Currency symbols go before the number.
-        x_text = `X Value: ${chart_config[chart_name].x.units}${xValue.toFixed(
-          x_precision
-        )}`;
+        x_text = `X Value: ${config.x.units}${xValue.toFixed(x_precision)}`;
       } else {
-        x_text += ` ${chart_config[chart_name].x.units}`;
+        x_text += ` ${config.x.units}`;
       }
       x_text = `Y Value: ${yValue.toFixed(y_precision)}`;
     }
     xValueDisplay.textContent = x_text;
 
     let y_text = `Y Value: ${yValue.toFixed(y_precision)}`;
-    if (chart_config[chart_name].y.units) {
-      if (chart_config[chart_name].y.units) {
-        if (
-          CURRENCY_SYMBOLS.includes(chart_config[chart_name].y.units.trim())
-        ) {
+    if (config.y.units) {
+      if (config.y.units) {
+        if (CURRENCY_SYMBOLS.includes(config.y.units.trim())) {
           // Currency symbols go before the number and we always do 2 decimal places.
-          y_text = `Y Value: ${
-            chart_config[chart_name].y.units
-          }${yValue.toFixed(2)}`;
+          y_text = `Y Value: ${config.y.units}${yValue.toFixed(2)}`;
         } else {
-          y_text += ` ${chart_config[chart_name].y.units}`;
+          y_text += ` ${config.y.units}`;
         }
       }
     }
     yValueDisplay.textContent = y_text;
 
     // Only show currency symbol if there are no x units.
-    if (!chart_config[chart_name].total.show_total) {
+    if (!config.total.show_total) {
       return;
     }
+
     let total_text = "";
-    if (chart_config[chart_name].y.units) {
+    if (config.y.units) {
       if (
-        CURRENCY_SYMBOLS.includes(chart_config[chart_name].y.units.trim()) &&
-        (!chart_config[chart_name].x.units ||
-          QUANTITY_WORDS.includes(
-            chart_config[chart_name].x.units.trim().toLowerCase()
-          ))
+        CURRENCY_SYMBOLS.includes(config.y.units.trim()) &&
+        (!config.x.units ||
+          QUANTITY_WORDS.includes(config.x.units.trim().toLowerCase()))
       ) {
         // Currency symbols go before the number, and we always do 2 decimal places.
         total_text = `Area Of Rectangle: ${
-          chart_config[chart_name].y.units
+          config.y.units
         }${area_of_rectangle.toFixed(2)}`;
       } else {
         total_text = `Area Of Rectangle: ${area_of_rectangle.toFixed(
           total_precision
-        )} ${chart_config[chart_name].y.units}`;
+        )} ${config.y.units}`;
       }
     }
     areaUnderCurveDisplay.textContent = total_text;
@@ -456,9 +533,10 @@
   // Thanks to user MartinCR https://stackoverflow.com/users/5058026/martin-cr
   //////////////////////////////////////////////////////////////////
 
-  function down_handler(event) {
-    document.getElementById(chart_name).getContext("2d");
-    const canvas = document.getElementById(chart_name);
+  function down_handler(event, config) {
+    document.getElementById(config.name).getContext("2d");
+    const canvas = document.getElementById(config.name);
+    const myChart = Chart.getChart(config.name);
     // check for data point near event location
     const points = myChart.getElementsAtEventForMode(
       event,
@@ -469,19 +547,19 @@
     if (points.length > 0) {
       // grab nearest point, start dragging
       activePoint = points[0];
-      canvas.onpointermove = move_handler;
+      canvas.onpointermove = (event) => move_handler(event, config);
     }
   }
 
-  function up_handler(event) {
-    const canvas = document.getElementById(chart_name);
+  function up_handler(event, config) {
+    const canvas = document.getElementById(config.name);
     // release grabbed point, stop dragging
     activePoint = null;
     canvas.onpointermove = null;
   }
 
-  function move_handler(event) {
-    const canvas = document.getElementById(chart_name);
+  function move_handler(event, config) {
+    const canvas = document.getElementById(config.name);
     // locate grabbed point in chart data
     if (activePoint != null) {
       let data = myChart.data;
@@ -504,22 +582,25 @@
       yValue = enforceRestrictions(
         yValue,
         data.datasets[datasetIndex].data,
-        chart_config[chart_name].restrictions
+        activePoint,
+        config.restrictions
       );
 
       // update y value of active data point
       data.datasets[datasetIndex].data[activePoint.index].y = yValue;
       myChart.update();
+      let ctx = document.getElementById(config.name);
       // Update the annotation
-      if (chart_config[chart_name].slider_features.use_slider) {
-        let slider = document.getElementById("x-value-slider");
+      if (config.slider_features.use_slider) {
+        let slider = ctx.parentElement.querySelector(".x-value-slider");
         annotateWithVertical(
-          myChart,
+          config,
           Number(slider.value),
           interpolateValues(myChart, Number(slider.value))
         );
       }
       // Update the corresponding input field
+      let value_inputs = ctx.parentElement.querySelectorAll(".y-values input");
       value_inputs[activePoint.index].value = yValue.toFixed(2);
     }
   }
@@ -534,7 +615,7 @@
    * @param {*} restrictions
    * @returns
    */
-  function enforceRestrictions(value, data, restrictions) {
+  function enforceRestrictions(value, data, activePoint, restrictions) {
     let y_values = data.map((d) => d.y);
     // Don't drag below 0
     if (restrictions.no_negative_values) {

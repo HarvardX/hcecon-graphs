@@ -11,7 +11,23 @@
   box-sizing: border-box;
 }
 
-.chart-controls #x-value-slider {
+.y-values input:disabled::-webkit-outer-spin-button,
+.y-values input:disabled::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+  background-color: rgba(0,0,0, 0.05);
+  border: 1px solid #ccc;
+}
+
+.y-values input[type=number]:disabled {
+  appearance: textfield;
+  -moz-appearance: textfield;
+  background-color: rgba(0,0,0, 0.05);
+  border: 1px solid #ccc;
+}
+
+.chart-controls .x-value-slider {
   width: 100%;
   margin-top: 20px;
 }
+
