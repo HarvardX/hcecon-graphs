@@ -1,5 +1,11 @@
 "use strict";
 (async () => {
+  // Don't run twice. Running once will handle all charts.
+  if (typeof window.hcecon_graphs_loaded !== "undefined") {
+    return;
+  }
+  window.hcecon_graphs_loaded = true;
+
   // Global-ish variables
   let activePoint = null;
   // prettier-ignore
@@ -11,26 +17,27 @@
   // number of relevant charts. If not, wait until it does.
   let num_charts = document.querySelectorAll(".hx-chartjs").length;
   let count = 0;
-  if (Object.keys(chart_config).length !== num_charts) {
-    let waiter = setInterval(function () {
-      num_charts = document.querySelectorAll(".hx-chartjs").length;
-      if (Object.keys(chart_config).length === num_charts) {
-        clearInterval(waiter);
-        main();
-      }
-      count += 1;
-      if (count > 100) {
-        // You get 10 seconds to load the charts.
-        console.error("Error: Chart configuration did not load in time.");
-        clearInterval(waiter);
-        return;
-      }
-    }, 100);
-  } else {
-    main();
-  }
+  let waiter = setInterval(function () {
+    console.log("Setting waiter for chart configuration...");
+    console.log(Object.keys(chart_config).length, num_charts);
+    if (Object.keys(chart_config).length === num_charts) {
+      console.log(chart_config);
+      clearInterval(waiter);
+      main();
+      return;
+    }
+    count += 1;
+    console.log(count);
+    if (count > 100) {
+      // You get 10 seconds to load the charts.
+      console.error("Error: Chart configuration did not load in time.");
+      clearInterval(waiter);
+      return;
+    }
+  }, 100);
 
-  async function main() {
+  function main() {
+    console.log("main");
     let chart_names = Object.keys(chart_config);
     for (let name of chart_names) {
       // Make sure the config contains the chart's own name
@@ -39,10 +46,11 @@
 
       let validated = validateInitialValues(chart_config[name]);
       if (!validated) {
-        return;
+        console.log("Initial values not valid, skipping chart " + name);
+        continue;
       }
-      loadLibraries(chart_config[name]);
     }
+    loadLibraries(chart_config);
   }
 
   /** Script loading
@@ -50,94 +58,93 @@
   // because then we can ensure they load in order.
   // This gets skipped if we're testing things outside the LXP.
   */
-  async function loadLibraries(config) {
+  function loadLibraries(chart_config) {
+    console.log(chart_config);
     // Insert the scripts via creating script tags
     if (
       window.location.href.includes("lxp.huit.harvard.edu") ||
       window.location.href.includes("harvardonline.harvard.edu")
     ) {
-      // If the scripts are already loaded, skip loading them again.
-      // `script_load_order` is defined in the javascript section of the TE.
-      let num_scripts_needed = script_load_order.length;
-      for (let script of script_load_order) {
-        let script_check = document.querySelector(`script[src*="${script}"]`);
-        if (script_check) {
-          num_scripts_needed -= 1;
-        }
-      }
-      if (num_scripts_needed === 0) {
-        return true;
-      }
+      for (let config in chart_config) {
+        let c = chart_config[config]; // Just shortening the variable name.
+        console.log(c.name);
+        console.log(c.te_id);
+        console.log(window.lxp.te);
+        console.log(Object.keys(window.lxp.te));
+        let media_object = window.lxp.te[c.te_id].media;
+        let media_names = Object.keys(media_object);
+        let reverse_lookup = {};
+        media_names.forEach((name) => {
+          reverse_lookup[media_object[name].filename] = name;
+        });
+        let scripts = [];
 
-      let media_object = window.lxp.te[config.te_id].media;
-      let media_names = Object.keys(media_object);
-      let reverse_lookup = {};
-      media_names.forEach((name) => {
-        reverse_lookup[media_object[name].filename] = name;
-      });
-      let scripts = [];
+        script_load_order.forEach((name) => {
+          // Is there already a script with this name?
+          let existing_script = document.querySelector(
+            `script[src*="${name}"]`
+          );
+          if (existing_script) {
+            console.log(`Script ${name} already loaded.`);
+          } else {
+            if (name in reverse_lookup) {
+              let scriptTag = document.createElement("script");
+              scriptTag.src = media_object[reverse_lookup[name]].publicUrl;
+              scriptTag.async = false;
+              document.head.appendChild(scriptTag);
+            } else {
+              console.error(`Error: Script ${name} not found in media object.`);
+            }
+          }
+        });
 
-      script_load_order.forEach((name) => {
-        if (name in reverse_lookup) {
-          scripts.push(media_object[reverse_lookup[name]].publicUrl);
-        } else {
-          console.error(`Error: Script ${name} not found in media object.`);
-          return false;
-        }
-      });
-      scripts.forEach((script) => {
-        let scriptTag = document.createElement("script");
-        scriptTag.src = script;
-        // Make sure they load in order.
-        scriptTag.async = false;
-        document.head.appendChild(scriptTag);
-      });
-    } else {
-      letsGo(chart_config[config.name]);
-    }
-
-    // Wait for the Chart.js and chart annotation libraries to load
-    if (
-      window.location.href.includes("lxp.huit.harvard.edu") ||
-      window.location.href.includes("harvardonline.harvard.edu")
-    ) {
-      let count = 0;
-      let waiter = setInterval(function () {
-        if (typeof Chart !== "undefined") {
-          clearInterval(waiter);
-          let annotation_waiter = setInterval(function () {
-            try {
-              if (Chart.registry.plugins.items.annotation !== undefined) {
-                if (config.name !== "undefined") {
-                  if (typeof Chart !== "undefined") {
+        // Wait for the Chart.js and chart annotation libraries to load
+        let count = 0;
+        let chart_waiter = setInterval(function () {
+          if (typeof Chart !== "undefined") {
+            clearInterval(chart_waiter);
+            console.log("Chart.js loaded.");
+            let count = 0;
+            let annotation_waiter = setInterval(function () {
+              try {
+                if (Chart.registry.plugins.items.annotation !== undefined) {
+                  if (c.name !== "undefined") {
                     clearInterval(annotation_waiter);
-                    letsGo(chart_config[config.name]);
+                    letsGo(c);
                     return true;
                   }
+                } else {
+                  console.log(
+                    "Waiting for Chart.js annotation library to load..."
+                  );
                 }
-              } else {
-                console.log(
-                  "Waiting for Chart.js annotation library to load..."
-                );
+              } catch (e) {
+                console.log("Error: " + e);
               }
-            } catch (e) {
-              console.log("Error: " + e);
-            }
-          }, 100);
-        } else {
-          console.log("Waiting for Chart.js to load...");
-        }
-        count += 1;
-        if (count > 100) {
-          console.error(
-            "Error: Chart.js annotation library did not load in time."
-          );
-          clearInterval(waiter);
-          return false;
-        }
-      }, 100);
+              count += 1;
+              if (count > 100) {
+                console.error(
+                  "Error: Chart.js annotation library did not load in time."
+                );
+                clearInterval(annotation_waiter);
+                return false;
+              }
+            }, 100);
+          } else {
+            console.log("Waiting for Chart.js to load...");
+          }
+          count += 1;
+          if (count > 100) {
+            console.error(
+              "Error: Chart.js annotation library did not load in time."
+            );
+            clearInterval(chart_waiter);
+            return false;
+          }
+        }, 100);
+      }
     } else {
-      return true;
+      letsGo(chart_config[config.name]);
     }
   }
 
@@ -233,13 +240,21 @@
   function validateInitialValues(config) {
     if (config.restrictions.no_negative_values) {
       if (Math.min(...config.y.values) < 0) {
-        alert("Error: y.values must not contain negative values.");
+        alert(
+          "Error in " +
+            config.name +
+            ": y.values must not contain negative values."
+        );
         return false;
       }
     }
 
     if (config.y.values.length !== config.x.values.length) {
-      alert("Error: You must provide equal numbers of x and y values.");
+      alert(
+        "Error in " +
+          config.name +
+          ": You must provide equal numbers of x and y values."
+      );
       return false;
     }
 
@@ -252,7 +267,9 @@
       config.restrictions.monotonic_increasing
     ) {
       console.error(
-        "Error: y.values must be in increasing order if you want monotonic increasing."
+        "Error in " +
+          config.name +
+          ": y.values must be in increasing order if you want monotonic increasing."
       );
       return false;
     }
@@ -265,7 +282,9 @@
       config.restrictions.monotonic_decreasing
     ) {
       console.error(
-        "Error: y.values must be in decreasing order if you want monotonic decreasing."
+        "Error in " +
+          config.name +
+          ": y.values must be in decreasing order if you want monotonic decreasing."
       );
       return false;
     }
