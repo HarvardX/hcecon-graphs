@@ -64,6 +64,39 @@
         custom_start_value: 2, // Only works if custom_start is true
       }
     };
+    chart_config["myChart2"] = {
+      te_id: document.currentScript.getAttribute('data-te-ids'),
+      title: "Demand Curve",
+      editable: true,
+      x: {
+        values: [1, 2, 3, 4, 5, 6],
+        label: "Quantity",
+        units: "", // use "units", "count", "items", etc. to keep x units from showing up in area of rectangle
+        precision: 0.01,
+      },
+      y: {
+        values: [50, 40, 30, 20, 10, 5],
+        label: "Price",
+        units: " $", // Currency symbols will show before the number
+        precision: .1,
+      },
+      total: {
+        show_total: true,
+        units: " $",
+        precision: 0.1,
+      },
+      restrictions: {
+        monotonic_increasing: false,
+        monotonic_decreasing: true, // Can't set both monotonics true at once.
+        no_negative_values: true,
+      },
+      slider_features: {
+        use_slider: true,
+        annotation_type: "box", // "box", "line", or "none"
+        custom_start: true,
+        custom_start_value: 3, // Only works if custom_start is true
+      }
+    };
     ////////// END CHART CONFIGURATION //////////
   </script>
 </head>
@@ -73,6 +106,19 @@
     <div style="max-width: 700px">
       <!---------- Make sure the <canvas> id below matches the chart_name variable ----------->
       <canvas id="myChart" class="chart_canvas hx-chartjs" aria-label="Demand curve chart"></canvas>
+      <!-- Inputs for keyboard users -->
+      <!-- TODO: possibly add drag functionality to the chart -->
+      <div class="y-values"></div>
+      <!-- Slider to inspect x/y values and total monetary value -->
+      <div class="chart-controls">
+        <span class="x-value-display" aria-live="polite">X Value: 0</span><br />
+        <span class="y-value-display" aria-live="polite">Y Value: 0</span><br />
+        <span class="area-under-curve-display" aria-live="polite">Area Of Rectangle: 0</span>
+      </div>
+      </div>
+      <div style="max-width: 700px; margin-top: 50px;">
+      <!---------- Make sure the <canvas> id below matches the chart_name variable ----------->
+      <canvas id="myChart2" class="chart_canvas hx-chartjs" aria-label="Demand curve chart"></canvas>
       <!-- Inputs for keyboard users -->
       <!-- TODO: possibly add drag functionality to the chart -->
       <div class="y-values"></div>

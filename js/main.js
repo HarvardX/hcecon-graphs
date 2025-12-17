@@ -92,6 +92,8 @@
         scriptTag.async = false;
         document.head.appendChild(scriptTag);
       });
+    } else {
+      letsGo(chart_config[config.name]);
     }
 
     // Wait for the Chart.js and chart annotation libraries to load
@@ -145,8 +147,11 @@
    */
   function letsGo(config) {
     const ctx = document.querySelector("#" + config.name);
+    const container_div = ctx.parentElement;
+    console.log(container_div);
+    container_div.style.backgrounColor = "red";
     // Create input fields for each y value
-    let y_value_container = document.querySelector(".y-values");
+    let y_value_container = container_div.querySelector(".y-values");
     let value_inputs = [];
     config.y.values.forEach((value, index) => {
       let input = document.createElement("input");
@@ -168,7 +173,7 @@
     // Create slider for x value selection, if we're using a slider.
     let slider;
     if (config.slider_features.use_slider) {
-      let slider_container = document.querySelector(".chart-controls");
+      let slider_container = container_div.querySelector(".chart-controls");
       let max_value = Math.max(...config.x.values);
       let min_value = Math.min(...config.x.values);
       slider = document.createElement("input");
@@ -193,7 +198,8 @@
    * Sets up the chart and its listeners.
    * @param {*} slider: the slider element, if it exists.
    */
-  function initializeChart(ctx, config, value_inputs, slider) {
+  function initializeChart(config, value_inputs, slider) {
+    let ctx = document.querySelector("#" + config.name);
     myChart = makeChart(ctx, config);
 
     // If the chart is editable,
@@ -274,10 +280,11 @@
     value_inputs.forEach((el, index) => {
       el.addEventListener("input", function () {
         const chart = Chart.getChart(ctx);
+        const container_div = ctx.parentElement;
         chart.data.datasets[0].data[index].y = Number(this.value) || 0;
         chart.update();
         if (config.slider_features.use_slider) {
-          let slider = ctx.parentElement.querySelector(".x-value-slider");
+          let slider = container_div.querySelector(".x-value-slider");
           annotateWithVertical(
             config,
             Number(slider.value),
@@ -311,7 +318,7 @@
    * Generates a new Chart.js chart within the ctx canvas element.
    * @param {*} ctx
    * @param {*} config
-   * @returns
+   * @returns {Chart} the created Chart.js chart object
    */
   function makeChart(ctx, config) {
     let data = config.x.values.map((x, i) => ({
