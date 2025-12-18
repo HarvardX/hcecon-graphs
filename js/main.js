@@ -36,7 +36,7 @@
     }
   }, 100);
 
-  /** Just kickoff. 
+  /** Just kickoff.
    * Gets config, validates x/y values, and sends to script loader,
    * which will continue execution from there.
    */
@@ -58,15 +58,14 @@
   }
 
   /** Script loading
-  * Loads the other scripts from the "media" section of all places,
-  * because then we can ensure they load in order.
-  * This gets skipped if we're testing things outside the LXP.
-  * Then waits for them to load before continuing.
-  * This works *specifically* with Chart.js and its annotation plugin.
-  * 
-  * Parameters:
-  * @param {object} chart_config the full chart configuration object defined in the HTML.
-  */
+   * Loads the other scripts from the "media" section of all places,
+   * because then we can ensure they load in order.
+   * This gets skipped if we're testing things outside the LXP.
+   * Then waits for them to load before continuing.
+   * This works *specifically* with Chart.js and its annotation plugin.
+   *
+   * @param {object} chart_config the full chart configuration object defined in the TE.
+   */
   function loadLibraries(chart_config) {
     console.log(chart_config);
     // Insert the scripts via creating script tags
@@ -159,7 +158,7 @@
   /**
    * Sets up input fields and the slider,
    * then passes to the chart initialization function.
-   * 
+   *
    * @param {*} config a single chart's configuration object.
    */
   function letsGo(config) {
@@ -339,14 +338,9 @@
     // Update the displayed x and y values based on the slider position
     let slider = ctx.parentElement.querySelector(".x-value-slider");
     slider.addEventListener("input", function () {
-      const xValue = Number(this.value);
-
       const chart = Chart.getChart(ctx);
-      const dataset = chart.data.datasets[0].data;
-      const labels = chart.data.labels;
-
-      let yValue = interpolateValues(chart, xValue) || 0;
-
+      const xValue = Number(this.value);
+      const yValue = interpolateValues(chart, xValue) || 0;
       annotateWithVertical(config, xValue, yValue);
     });
   }
@@ -362,8 +356,8 @@
       x: x,
       y: config.y.values[i],
     }));
-    let start_x_at_zero = Math.min(...config.x.values) === 0;
-    let start_y_at_zero = Math.min(...config.y.values) === 0;
+    const start_x_at_zero = Math.min(...config.x.values) === 0;
+    const start_y_at_zero = Math.min(...config.y.values) === 0;
     console.log(data);
     console.log(config);
     return new Chart(ctx, {
@@ -429,8 +423,8 @@
     });
   }
 
-  /** 
-   * Linear interpolation to find the corresponding y value 
+  /**
+   * Linear interpolation to find the corresponding y value
    * @param {Chart} chart the Chart.js chart object
    * @param {number} xValue the x value to interpolate for
    * @returns {number} the interpolated y value
@@ -454,8 +448,8 @@
     return yValue;
   }
 
-  /** 
-   * Adds a vertical line to the plot at the specified xValue. 
+  /**
+   * Adds a vertical line to the plot at the specified xValue.
    * @param {*} config the chart configuration object.
    * @param {number} xValue the x value to annotate
    * @param {number} yValue the corresponding y value at xValue,
