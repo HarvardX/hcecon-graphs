@@ -217,8 +217,8 @@
    * @param {*} slider the slider element.
    */
   function initializeChart(config, value_inputs, slider) {
-    let ctx = document.querySelector("#" + config.name);
-    myChart = makeChart(ctx, config);
+    const ctx = document.querySelector("#" + config.name);
+    const myChart = makeChart(ctx, config);
 
     // If the chart is editable,
     // set pointer event handlers for canvas element
@@ -599,7 +599,7 @@
     if (points.length > 0) {
       // grab nearest point, start dragging
       activePoint = points[0];
-      canvas.onpointermove = (event) => move_handler(event, config);
+      canvas.onpointermove = (event) => move_handler(event, config, myChart);
     }
   }
 
@@ -610,7 +610,7 @@
     canvas.onpointermove = null;
   }
 
-  function move_handler(event, config) {
+  function move_handler(event, config, myChart) {
     const canvas = document.getElementById(config.name);
     // locate grabbed point in chart data
     if (activePoint != null) {
