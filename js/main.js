@@ -158,7 +158,7 @@
   function letsGo(config) {
     const ctx = document.querySelector("#" + config.name);
     const container_div = ctx.parentElement;
-    console.log(container_div);
+    // console.log(container_div);
     container_div.style.backgrounColor = "red";
     // Create input fields for each y value
     let y_value_container = container_div.querySelector(".y-values");
@@ -538,7 +538,7 @@
    */
   function withUnits(label, value, units, precision) {
     let text = "";
-    console.log(`withUnits: ${label}, ${value}, ${units}, ${precision}`);
+    // console.log(`withUnits: ${label}, ${value}, ${units}, ${precision}`);
     if (units) {
       if (CURRENCY_SYMBOLS.includes(units.trim())) {
         // Currency symbols go before the number.
