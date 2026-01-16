@@ -88,9 +88,7 @@
 
         script_load_order.forEach((name) => {
           // Is there already a script with this name?
-          let existing_script = document.querySelector(
-            `script[src*="${name}"]`
-          );
+          let existing_script = document.querySelector(`script[src*="${name}"]`);
           if (existing_script) {
             console.log(`Script ${name} already loaded.`);
           } else {
@@ -121,18 +119,14 @@
                     return true;
                   }
                 } else {
-                  console.log(
-                    "Waiting for Chart.js annotation library to load..."
-                  );
+                  console.log("Waiting for Chart.js annotation library to load...");
                 }
               } catch (e) {
                 console.log("Error: " + e);
               }
               count += 1;
               if (count > 100) {
-                console.error(
-                  "Error: Chart.js annotation library did not load in time."
-                );
+                console.error("Error: Chart.js annotation library did not load in time.");
                 clearInterval(annotation_waiter);
                 return false;
               }
@@ -142,16 +136,16 @@
           }
           count += 1;
           if (count > 100) {
-            console.error(
-              "Error: Chart.js annotation library did not load in time."
-            );
+            console.error("Error: Chart.js annotation library did not load in time.");
             clearInterval(chart_waiter);
             return false;
           }
         }, 100);
       }
     } else {
-      letsGo(chart_config[config.name]);
+      for (let c in chart_config) {
+        letsGo(chart_config[c]);
+      }
     }
   }
 
@@ -174,10 +168,7 @@
       input.type = "number";
       input.value = value;
       input.setAttribute("placeholder", "0");
-      input.setAttribute(
-        "aria-label",
-        `y value at x=${config.x.values[index]}`
-      );
+      input.setAttribute("aria-label", `y value at x=${config.x.values[index]}`);
       input.value = value;
       if (!config.editable) {
         input.disabled = true;
@@ -252,21 +243,13 @@
   function validateInitialValues(config) {
     if (config.restrictions.no_negative_values) {
       if (Math.min(...config.y.values) < 0) {
-        alert(
-          "Error in " +
-            config.name +
-            ": y.values must not contain negative values."
-        );
+        alert("Error in " + config.name + ": y.values must not contain negative values.");
         return false;
       }
     }
 
     if (config.y.values.length !== config.x.values.length) {
-      alert(
-        "Error in " +
-          config.name +
-          ": You must provide equal numbers of x and y values."
-      );
+      alert("Error in " + config.name + ": You must provide equal numbers of x and y values.");
       return false;
     }
 
@@ -530,54 +513,48 @@
       (Math.round(xValue * 10 ** x_precision) / 10 ** x_precision) *
       (Math.round(yValue * 10 ** y_precision) / 10 ** y_precision);
 
-    let x_text = `X Value: ${xValue.toFixed(x_precision)}`;
-    if (config.x.units) {
-      if (CURRENCY_SYMBOLS.includes(config.x.units.trim())) {
-        // Currency symbols go before the number.
-        x_text = `X Value: ${config.x.units}${xValue.toFixed(x_precision)}`;
-      } else {
-        x_text += ` ${config.x.units}`;
-      }
-      x_text = `Y Value: ${yValue.toFixed(y_precision)}`;
-    }
+    let x_label = config.x.label || "X Value";
+    let x_text = withUnits(x_label, xValue, config.x.units, x_precision);
     xValueDisplay.textContent = x_text;
 
-    let y_text = `Y Value: ${yValue.toFixed(y_precision)}`;
-    if (config.y.units) {
-      if (config.y.units) {
-        if (CURRENCY_SYMBOLS.includes(config.y.units.trim())) {
-          // Currency symbols go before the number and we always do 2 decimal places.
-          y_text = `Y Value: ${config.y.units}${yValue.toFixed(2)}`;
-        } else {
-          y_text += ` ${config.y.units}`;
-        }
-      }
-    }
+    let y_label = config.y.label || "Y Value";
+    let y_text = withUnits(y_label, yValue, config.y.units, y_precision);
     yValueDisplay.textContent = y_text;
 
-    // Only show currency symbol if there are no x units.
-    if (!config.total.show_total) {
-      return;
-    }
-
-    let total_text = "";
-    if (config.y.units) {
-      if (
-        CURRENCY_SYMBOLS.includes(config.y.units.trim()) &&
-        (!config.x.units ||
-          QUANTITY_WORDS.includes(config.x.units.trim().toLowerCase()))
-      ) {
-        // Currency symbols go before the number, and we always do 2 decimal places.
-        total_text = `Area Of Rectangle: ${
-          config.y.units
-        }${area_of_rectangle.toFixed(2)}`;
-      } else {
-        total_text = `Area Of Rectangle: ${area_of_rectangle.toFixed(
-          total_precision
-        )} ${config.y.units}`;
-      }
-    }
+    let total_label = config.total.label || "Area Of Rectangle";
+    let total_text = withUnits(total_label, area_of_rectangle, config.total.units, total_precision);
     areaUnderCurveDisplay.textContent = total_text;
+  }
+
+  /**
+   * Creates things like "Price: $10.00" or "Quantity: 5 gloops".
+   * Currency symbols go before the number,
+   * quantity words like "units" or "count" don't get included.
+   * @param {string} label
+   * @param {number} value
+   * @param {string} units
+   * @param {number} precision
+   * @returns
+   */
+  function withUnits(label, value, units, precision) {
+    let text = "";
+    console.log(`withUnits: ${label}, ${value}, ${units}, ${precision}`);
+    if (units) {
+      if (CURRENCY_SYMBOLS.includes(units.trim())) {
+        // Currency symbols go before the number.
+        text = `${label}: ${units}${value.toFixed(precision)}`;
+      } else {
+        if (QUANTITY_WORDS.includes(units.trim().toLowerCase())) {
+          // Quantity words like "units" don't get added after the number.
+          text = `${label}: ${value.toFixed(precision)}`;
+        } else {
+          text = `${label}: ${value.toFixed(precision)} ${units}`;
+        }
+      }
+    } else {
+      text = `${label}: ${value.toFixed(precision)}`;
+    }
+    return text;
   }
 
   //////////////////////////////////////////////////////////////////
@@ -590,12 +567,7 @@
     const canvas = document.getElementById(config.name);
     const myChart = Chart.getChart(config.name);
     // check for data point near event location
-    const points = myChart.getElementsAtEventForMode(
-      event,
-      "nearest",
-      { intersect: true },
-      false
-    );
+    const points = myChart.getElementsAtEventForMode(event, "nearest", { intersect: true }, false);
     if (points.length > 0) {
       // grab nearest point, start dragging
       activePoint = points[0];
@@ -624,13 +596,7 @@
       // convert mouse position to chart y axis value
       let chartArea = myChart.chartArea;
       let yAxis = myChart.scales["y"];
-      let yValue = map(
-        position.y,
-        chartArea.bottom,
-        chartArea.top,
-        yAxis.min,
-        yAxis.max
-      );
+      let yValue = map(position.y, chartArea.bottom, chartArea.top, yAxis.min, yAxis.max);
       yValue = enforceRestrictions(
         yValue,
         data.datasets[datasetIndex].data,
