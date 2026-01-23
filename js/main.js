@@ -229,7 +229,7 @@
       annotateWithVertical(
         config,
         Number(slider.value),
-        interpolateValues(Chart.getChart(ctx), Number(slider.value))
+        interpolateValues(Chart.getChart(ctx), Number(slider.value)),
       );
     }
   }
@@ -264,7 +264,7 @@
       console.error(
         "Error in " +
           config.name +
-          ": y.values must be in increasing order if you want monotonic increasing."
+          ": y.values must be in increasing order if you want monotonic increasing.",
       );
       return false;
     }
@@ -279,7 +279,7 @@
       console.error(
         "Error in " +
           config.name +
-          ": y.values must be in decreasing order if you want monotonic decreasing."
+          ": y.values must be in decreasing order if you want monotonic decreasing.",
       );
       return false;
     }
@@ -305,7 +305,7 @@
           annotateWithVertical(
             config,
             Number(slider.value),
-            interpolateValues(chart, Number(slider.value))
+            interpolateValues(chart, Number(slider.value)),
           );
         }
       });
@@ -341,6 +341,13 @@
     }));
     const start_x_at_zero = Math.min(...config.x.values) === 0;
     const start_y_at_zero = Math.min(...config.y.values) === 0;
+    // Setting an arbitrary minimum y box height, because otherwise
+    // when everything starts at 0 we end up with distances like 10^-17
+    let y_box_height = config.minimum_height || 1;
+    if (Math.max(...config.y.values) > y_box_height) {
+      y_box_height = Math.max(...config.y.values);
+    }
+
     console.log(data);
     console.log(config);
     return new Chart(ctx, {
@@ -380,6 +387,7 @@
         scales: {
           y: {
             min: Math.min(...config.y.values),
+            max: y_box_height,
             ticks: {
               beginAtZero: start_y_at_zero,
             },
@@ -583,44 +591,76 @@
   }
 
   function move_handler(event, config, myChart) {
-    const canvas = document.getElementById(config.name);
     // locate grabbed point in chart data
-    if (activePoint != null) {
-      let data = myChart.data;
-      let datasetIndex = activePoint.datasetIndex;
-
-      // read mouse position
-      const helpers = Chart.helpers;
-      let position = helpers.getRelativePosition(event, myChart);
-
-      // convert mouse position to chart y axis value
-      let chartArea = myChart.chartArea;
-      let yAxis = myChart.scales["y"];
-      let yValue = map(position.y, chartArea.bottom, chartArea.top, yAxis.min, yAxis.max);
-      yValue = enforceRestrictions(
-        yValue,
-        data.datasets[datasetIndex].data,
-        activePoint,
-        config.restrictions
-      );
-
-      // update y value of active data point
-      data.datasets[datasetIndex].data[activePoint.index].y = yValue;
-      myChart.update();
-      let ctx = document.getElementById(config.name);
-      // Update the annotation
-      if (config.slider_features.use_slider) {
-        let slider = ctx.parentElement.querySelector(".x-value-slider");
-        annotateWithVertical(
-          config,
-          Number(slider.value),
-          interpolateValues(myChart, Number(slider.value))
-        );
-      }
-      // Update the corresponding input field
-      let value_inputs = ctx.parentElement.querySelectorAll(".y-values input");
-      value_inputs[activePoint.index].value = yValue.toFixed(2);
+    if (activePoint == null) {
+      return;
     }
+
+    let data = myChart.data;
+    let datasetIndex = activePoint.datasetIndex;
+
+    // read mouse position
+    const helpers = Chart.helpers;
+    let position = helpers.getRelativePosition(event, myChart);
+
+    // convert mouse position to chart y axis value
+    let chartArea = myChart.chartArea;
+    let yAxis = myChart.scales["y"];
+    let yValue = map(position.y, chartArea.bottom, chartArea.top, yAxis.min, yAxis.max);
+    yValue = enforceRestrictions(
+      yValue,
+      data.datasets[datasetIndex].data,
+      activePoint,
+      config.restrictions,
+    );
+
+    // Prevent tiny drags near 0 that result in values like 10^-17
+    const original_y = config.y.values[activePoint.index];
+    const y_range = Math.abs(Math.max(...config.y.values) - Math.min(...config.y.values));
+    let y_box_height = 1; // default
+    if (config.restrictions?.minimum_height) {
+      y_box_height = config.restrictions.minimum_height;
+    }
+    if (y_range > y_box_height) {
+      y_box_height = y_range;
+    }
+    let minimum_drag_distance = y_box_height * 0.01;
+    if (Math.abs(yValue - original_y) < minimum_drag_distance) {
+      return;
+    }
+
+    // If the y value is higher than the max, lift the limit on the max.
+    if (yValue > yAxis.max) {
+      delete myChart.options.scales.y.max;
+      myChart.update();
+    }
+
+    // If the y value is lower than the min, lift the limit on the min.
+    if (yValue < yAxis.min) {
+      if (config.restrictions.no_negative_values && yValue <= 0) {
+        myChart.options.scales.y.min = 0;
+      } else {
+        delete myChart.options.scales.y.min;
+      }
+      myChart.update();
+    }
+
+    // update y value of active data point
+    data.datasets[datasetIndex].data[activePoint.index].y = yValue;
+    myChart.update();
+    let ctx = document.getElementById(config.name);
+    // Update the annotation
+    if (config.slider_features.use_slider) {
+      let slider = ctx.parentElement.querySelector(".x-value-slider");
+      annotateWithVertical(
+        config,
+        Number(slider.value),
+        interpolateValues(myChart, Number(slider.value)),
+      );
+    }
+    // Update the corresponding input field
+    let value_inputs = ctx.parentElement.querySelectorAll(".y-values input");
+    value_inputs[activePoint.index].value = yValue.toFixed(2);
   }
 
   //////////////////////
