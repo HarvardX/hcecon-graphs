@@ -298,7 +298,26 @@
       el.addEventListener("input", function () {
         const chart = Chart.getChart(ctx);
         const container_div = ctx.parentElement;
-        chart.data.datasets[0].data[index].y = Number(this.value) || 0;
+        let yValue = Number(this.value) || 0;
+        let yAxis = chart.scales["y"];
+        chart.data.datasets[0].data[index].y = yValue;
+
+        // If the y value is higher than the max, lift the limit on the max.
+        if (yValue > yAxis.max) {
+          delete chart.options.scales.y.max;
+          chart.update();
+        }
+
+        // If the y value is lower than the min, lift the limit on the min.
+        if (yValue < yAxis.min) {
+          if (config.restrictions.no_negative_values && yValue <= 0) {
+            chart.options.scales.y.min = 0;
+          } else {
+            delete chart.options.scales.y.min;
+          }
+          chart.update();
+        }
+
         chart.update();
         if (config.slider_features.use_slider) {
           let slider = container_div.querySelector(".x-value-slider");
