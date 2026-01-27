@@ -1,11 +1,13 @@
 # hcecon-graphs
 
-Graphing util for the Harvard Online course Health Care Economics
+Graphing util for the Harvard Online course Health Care Economics.
+
+Designed primarily to allow learners to interact with simple graphs and obtain straightforward data from them.
 
 ## Current status
 
 - Basic functionality present
-- Needs to be adjusted for use in LXP
+- Works in the LXP learning management system
 
 ## Dependencies
 
